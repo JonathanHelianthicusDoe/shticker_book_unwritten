@@ -1,0 +1,12 @@
+# Rust stuff
+Cargo.lock
+/target
+**/*.rs.bk
+
+# Text editor stuff
+*.swp
+.vscode/
+
+# Stray things
+*.txt
+*.json
