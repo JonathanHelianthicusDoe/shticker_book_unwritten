@@ -1,4 +1,4 @@
-use crate::{config::Config, error::Error};
+use crate::{config::Config, error::Error, patch};
 use bzip2::write::BzDecoder;
 use reqwest;
 use serde_json;
@@ -74,148 +74,262 @@ pub fn update(config: &Config) -> Result<(), Error> {
 
         println!("        Checking to see if file already exists...");
         install_dir.push(file_name);
-        match File::open(&install_dir) {
-            Ok(mut f) => {
-                println!("        File exists, checking SHA1 hash...");
-
-                let mut file_buf = [0u8; BUFFER_SIZE];
-                let initial_sha = sha_of_reader(&mut f, &mut file_buf)?;
-
-                let manifest_sha =
-                    sha_from_hash_str(match file_map.get("hash") {
-                        Some(serde_json::Value::String(s)) => s,
-                        Some(_) =>
-                            return Err(Error::BadManifestFormat(
-                                "Value of \"hash\" was not a String"
-                                    .to_owned(),
-                            )),
-                        _ =>
-                            return Err(Error::BadManifestFormat(
-                                "\"hash\" key missing".to_owned(),
-                            )),
-                    })?;
-
-                if initial_sha == manifest_sha {
-                    println!("        SHA1 hash matches!");
-
-                    continue;
-                }
-
-                print!("        SHA1 hash mismatch:\n          Local:    ");
-                for b in initial_sha.iter() {
-                    print!("{:02x}", b);
-                }
-                print!("\n          Manifest: ");
-                for b in manifest_sha.iter() {
-                    print!("{:02x}", b);
-                }
-                println!("\n        Checking for a patch...");
-
-                let patches_map = file_map
-                    .get("patches")
-                    .and_then(|val| match val {
-                        serde_json::Value::Object(m) => Some(m),
-                        _ => None,
-                    })
-                    .ok_or_else(|| {
-                        Error::BadManifestFormat(format!(
-                            "Expected \"patches\" key with Object value to \
-                             be in the \"{}\" Object",
-                            file_name,
-                        ))
-                    })?;
-                let mut did_patch = false;
-                for (manifest_sha_str, patch_obj) in patches_map.iter() {
-                    if sha_from_hash_str(manifest_sha_str)? != initial_sha {
-                        continue;
-                    }
-
-                    let patch_map = match patch_obj {
-                        serde_json::Value::Object(m) => m,
-                        _ =>
-                            return Err(Error::BadManifestFormat(
-                                "Expected \"patches\" to be objects"
-                                    .to_owned(),
-                            )),
-                    };
-
-                    let patch_file_name = patch_map
-                        .get("filename")
-                        .and_then(|val| match val {
-                            serde_json::Value::String(s) => Some(s),
-                            _ => None,
-                        })
-                        .ok_or_else(|| {
-                            Error::BadManifestFormat(
-                                "Expected \"filename\" key in patch Object"
-                                    .to_owned(),
-                            )
-                        })?;
-
-                    println!("        Found a patch! Downloading it...");
-
-                    let mut extracted_patch_file_name = String::with_capacity(
-                        patch_file_name.len() + ".extracted".len(),
-                    );
-                    extracted_patch_file_name += patch_file_name;
-                    extracted_patch_file_name += ".extracted";
-                    download_file_to_cache(
-                        &mut file_buf,
-                        config,
-                        patch_file_name,
-                        &extracted_patch_file_name,
-                        &patch_map
-                            .get("compPatchHash")
-                            .ok_or_else(|| {
-                                Error::BadManifestFormat(
-                                    "Expected \"compPatchHash\"".to_owned(),
-                                )
-                            })
-                            .and_then(|val| match val {
-                                serde_json::Value::String(s) =>
-                                    sha_from_hash_str(s),
-                                _ => Err(Error::BadManifestFormat(
-                                    "Expected \"compPatchHash\" to be a \
-                                     String"
-                                        .to_owned(),
-                                )),
-                            })?,
-                        &patch_map
-                            .get("patchHash")
-                            .ok_or_else(|| {
-                                Error::BadManifestFormat(
-                                    "Expected \"patchHash\"".to_owned(),
-                                )
-                            })
-                            .and_then(|val| match val {
-                                serde_json::Value::String(s) =>
-                                    sha_from_hash_str(s),
-                                _ => Err(Error::BadManifestFormat(
-                                    "Expected \"patchHash\" to be a String"
-                                        .to_owned(),
-                                )),
-                            })?,
-                        5,
-                    )?;
-
-                    break;
-                }
-            },
+        let already_existing_file = match File::open(&install_dir) {
+            Ok(f) => Some(f),
             Err(ioe) => match ioe.kind() {
                 io::ErrorKind::NotFound => {
                     println!(
-                        "        File doesn't exist, downloading fresh \
-                         copy..."
+                        "        File doesn't exist, downloading from \
+                         scratch..."
                     );
 
-                    unimplemented!()
+                    let mut file_buf = [0u8; BUFFER_SIZE];
+                    let compressed_file_name = file_map
+                        .get("dl")
+                        .ok_or_else(|| {
+                            Error::BadManifestFormat(
+                                "Expected \"dl\"".to_owned(),
+                            )
+                        })
+                        .and_then(|val| match val {
+                            serde_json::Value::String(s) => Ok(s),
+                            _ => Err(Error::BadManifestFormat(
+                                "Expected \"dl\" to be a String".to_owned(),
+                            )),
+                        })?;
+                    let compressed_sha = file_map
+                        .get("compHash")
+                        .ok_or_else(|| {
+                            Error::BadManifestFormat(
+                                "Expected \"compHash\"".to_owned(),
+                            )
+                        })
+                        .and_then(|val| match val {
+                            serde_json::Value::String(s) =>
+                                sha_from_hash_str(s),
+                            _ => Err(Error::BadManifestFormat(
+                                "Expected \"compHash\" to be a String"
+                                    .to_owned(),
+                            )),
+                        })?;
+                    let decompressed_sha = file_map
+                        .get("hash")
+                        .ok_or_else(|| {
+                            Error::BadManifestFormat(
+                                "Expected \"hash\"".to_owned(),
+                            )
+                        })
+                        .and_then(|val| match val {
+                            serde_json::Value::String(s) =>
+                                sha_from_hash_str(s),
+                            _ => Err(Error::BadManifestFormat(
+                                "Expected \"hash\" to be a String".to_owned(),
+                            )),
+                        })?;
+
+                    download_file(
+                        false,
+                        &mut file_buf,
+                        config,
+                        compressed_file_name,
+                        file_name,
+                        &compressed_sha,
+                        &decompressed_sha,
+                        5,
+                    )?;
+
+                    None
                 },
                 io::ErrorKind::PermissionDenied =>
                     return Err(Error::PermissionDenied(ioe)),
                 _ => return Err(Error::UnknownIoError(ioe)),
             },
+        };
+        if let Some(f) = already_existing_file {
+            update_existing_file(
+                config,
+                f,
+                file_map,
+                file_name,
+                &install_dir,
+            )?;
         }
+
         install_dir.pop();
+    }
+
+    Ok(())
+}
+
+fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
+    config: &Config,
+    mut already_existing_file: File,
+    file_map: &serde_json::Map<String, serde_json::Value>,
+    file_name: S,
+    full_file_path: P,
+) -> Result<(), Error> {
+    println!("        File exists, checking SHA1 hash...");
+
+    let mut file_buf = [0u8; BUFFER_SIZE];
+    let initial_sha =
+        sha_of_reader(&mut already_existing_file, &mut file_buf)?;
+
+    let manifest_sha = sha_from_hash_str(match file_map.get("hash") {
+        Some(serde_json::Value::String(s)) => s,
+        Some(_) =>
+            return Err(Error::BadManifestFormat(
+                "Value of \"hash\" was not a String".to_owned(),
+            )),
+        _ =>
+            return Err(Error::BadManifestFormat(
+                "\"hash\" key missing".to_owned(),
+            )),
+    })?;
+
+    if initial_sha == manifest_sha {
+        println!("        SHA1 hash matches!");
+
+        return Ok(());
+    }
+
+    print!("        SHA1 hash mismatch:\n          Local:    ");
+    for b in initial_sha.iter() {
+        print!("{:02x}", b);
+    }
+    print!("\n          Manifest: ");
+    for b in manifest_sha.iter() {
+        print!("{:02x}", b);
+    }
+    println!("\n        Checking for a patch...");
+
+    let patches_map = file_map
+        .get("patches")
+        .and_then(|val| match val {
+            serde_json::Value::Object(m) => Some(m),
+            _ => None,
+        })
+        .ok_or_else(|| {
+            Error::BadManifestFormat(format!(
+                "Expected \"patches\" key with Object value to be in the \
+                 \"{}\" Object",
+                file_name.as_ref(),
+            ))
+        })?;
+
+    let mut did_patch = false;
+    for (manifest_sha_str, patch_obj) in patches_map.iter() {
+        if sha_from_hash_str(manifest_sha_str)? != initial_sha {
+            continue;
+        }
+
+        let patch_map = match patch_obj {
+            serde_json::Value::Object(m) => m,
+            _ =>
+                return Err(Error::BadManifestFormat(
+                    "Expected \"patches\" to be objects".to_owned(),
+                )),
+        };
+
+        let patch_file_name = patch_map
+            .get("filename")
+            .and_then(|val| match val {
+                serde_json::Value::String(s) => Some(s),
+                _ => None,
+            })
+            .ok_or_else(|| {
+                Error::BadManifestFormat(
+                    "Expected \"filename\" key in patch Object".to_owned(),
+                )
+            })?;
+
+        println!("        Found a patch! Downloading it...");
+
+        let mut extracted_patch_file_name =
+            String::with_capacity(patch_file_name.len() + ".extracted".len());
+        extracted_patch_file_name += patch_file_name;
+        extracted_patch_file_name += ".extracted";
+        download_file(
+            true,
+            &mut file_buf,
+            config,
+            patch_file_name,
+            &extracted_patch_file_name,
+            &patch_map
+                .get("compPatchHash")
+                .ok_or_else(|| {
+                    Error::BadManifestFormat(
+                        "Expected \"compPatchHash\"".to_owned(),
+                    )
+                })
+                .and_then(|val| match val {
+                    serde_json::Value::String(s) => sha_from_hash_str(s),
+                    _ => Err(Error::BadManifestFormat(
+                        "Expected \"compPatchHash\" to be a String".to_owned(),
+                    )),
+                })?,
+            &patch_map
+                .get("patchHash")
+                .ok_or_else(|| {
+                    Error::BadManifestFormat(
+                        "Expected \"patchHash\"".to_owned(),
+                    )
+                })
+                .and_then(|val| match val {
+                    serde_json::Value::String(s) => sha_from_hash_str(s),
+                    _ => Err(Error::BadManifestFormat(
+                        "Expected \"patchHash\" to be a String".to_owned(),
+                    )),
+                })?,
+            5,
+        )?;
+
+        println!("        Applying patch...");
+
+        patch::patch_file(&extracted_patch_file_name, full_file_path)?;
+
+        println!("        File patched successfully!");
+
+        did_patch = true;
+
+        break;
+    }
+
+    if !did_patch {
+        println!("        No patches found, downloading from scratch...");
+
+        let compressed_file_name = file_map
+            .get("dl")
+            .ok_or_else(|| {
+                Error::BadManifestFormat("Expected \"dl\"".to_owned())
+            })
+            .and_then(|val| match val {
+                serde_json::Value::String(s) => Ok(s),
+                _ => Err(Error::BadManifestFormat(
+                    "Expected \"dl\" to be a String".to_owned(),
+                )),
+            })?;
+        let compressed_sha = file_map
+            .get("compHash")
+            .ok_or_else(|| {
+                Error::BadManifestFormat("Expected \"compHash\"".to_owned())
+            })
+            .and_then(|val| match val {
+                serde_json::Value::String(s) => sha_from_hash_str(s),
+                _ => Err(Error::BadManifestFormat(
+                    "Expected \"compHash\" to be a String".to_owned(),
+                )),
+            })?;
+
+        download_file(
+            false,
+            &mut file_buf,
+            config,
+            compressed_file_name,
+            file_name,
+            &compressed_sha,
+            &manifest_sha,
+            5,
+        )?;
     }
 
     Ok(())
@@ -280,7 +394,7 @@ fn sha_from_hash_str<S: AsRef<str>>(hash_str: S) -> Result<[u8; 20], Error> {
             b'f' | b'F' => 0x0f,
             _ =>
                 return Err(Error::BadManifestFormat(format!(
-                    "Unexpected character in SHA1 hash string: {}",
+                    "Unexpected character in SHA1 hash string: {:?}",
                     b as char,
                 ))),
         };
@@ -291,11 +405,15 @@ fn sha_from_hash_str<S: AsRef<str>>(hash_str: S) -> Result<[u8; 20], Error> {
     Ok(manifest_sha)
 }
 
-fn download_file_to_cache<S: AsRef<str>>(
+/// Downloads to the cache if `to_cache`, otherwise downloads to the main
+/// installation directory.
+#[allow(clippy::too_many_arguments)]
+fn download_file<S: AsRef<str>, T: AsRef<str>>(
+    to_cache: bool,
     buf: &mut [u8],
     config: &Config,
     file_name: S,
-    decompressed_file_name: S,
+    decompressed_file_name: T,
     compressed_sha: &[u8; 20],
     decompressed_sha: &[u8; 20],
     max_tries: usize,
@@ -319,11 +437,15 @@ fn download_file_to_cache<S: AsRef<str>>(
             return Err(Error::DownloadRequestStatusError(dl_resp.status()));
         }
 
-        let mut cache_loc = config.cache_dir.clone();
-        cache_loc.push(file_name.as_ref());
+        let mut loc = if to_cache {
+            config.cache_dir.clone()
+        } else {
+            config.install_dir.clone()
+        };
+        loc.push(file_name.as_ref());
         {
             let mut dled_file =
-                File::create(&cache_loc).map_err(|ioe| match ioe.kind() {
+                File::create(&loc).map_err(|ioe| match ioe.kind() {
                     io::ErrorKind::PermissionDenied =>
                         Error::PermissionDenied(ioe),
                     _ => Error::UnknownIoError(ioe),
@@ -335,7 +457,7 @@ fn download_file_to_cache<S: AsRef<str>>(
 
         println!("        Checking SHA1 hash of {}", file_name.as_ref());
 
-        let dled_sha = sha_of_file_by_path(&cache_loc, buf)?;
+        let dled_sha = sha_of_file_by_path(&loc, buf)?;
         if &dled_sha != compressed_sha {
             print!("        SHA1 hash mismatch:\n          Local:    ");
             for b in dled_sha.iter() {
@@ -352,14 +474,14 @@ fn download_file_to_cache<S: AsRef<str>>(
 
         println!("        SHA1 hash matches! Extracting...");
 
-        let compressed_path = cache_loc.clone();
-        cache_loc.pop();
-        cache_loc.push(decompressed_file_name.as_ref());
-        decompress_file(buf, &compressed_path, &cache_loc)?;
+        let compressed_path = loc.clone();
+        loc.pop();
+        loc.push(decompressed_file_name.as_ref());
+        decompress_file(buf, &compressed_path, &loc)?;
 
         println!("        Checking SHA1 hash of extracted file...");
 
-        let extracted_sha = sha_of_file_by_path(&cache_loc, buf)?;
+        let extracted_sha = sha_of_file_by_path(&loc, buf)?;
         if &extracted_sha != decompressed_sha {
             print!("        SHA1 hash mismatch:\n          Local:    ");
             for b in extracted_sha.iter() {

@@ -17,10 +17,16 @@ pub enum Error {
     ManifestRequestStatusError(reqwest::StatusCode),
     BadManifestFormat(String),
     FileReadFailure(io::Error),
+    FileWriteFailure(io::Error),
     DownloadRequestError(reqwest::Error),
     DownloadRequestStatusError(reqwest::StatusCode),
     CopyIntoFileError(reqwest::Error),
     DecodeError(io::Error),
+    BadPatchVersion,
+    BadPatchSize,
+    SeekError(io::Error),
+    PatchSanityCheckFail(u8),
+    FileRenameError(io::Error),
 }
 
 impl fmt::Display for Error {
@@ -55,6 +61,8 @@ impl fmt::Display for Error {
                 write!(f, "Bad manifest format:\n\t{}", s),
             Self::FileReadFailure(ioe) =>
                 write!(f, "Failed to read from file:\n\t{}", ioe),
+            Self::FileWriteFailure(ioe) =>
+                write!(f, "Failed to write to file:\n\t{}", ioe),
             Self::DownloadRequestError(dre) =>
                 write!(f, "Error requesting download:\n\t{}", dre),
             Self::DownloadRequestStatusError(sc) => write!(
@@ -69,6 +77,18 @@ impl fmt::Display for Error {
             ),
             Self::DecodeError(ioe) =>
                 write!(f, "Error decoding bzip2:\n\t{}", ioe),
+            Self::BadPatchVersion => f.write_str(
+                "Unable to determine patch's version, or patch is invalid",
+            ),
+            Self::BadPatchSize => f.write_str(
+                "Unable to determine patch's size, or patch is invalid",
+            ),
+            Self::SeekError(ioe) =>
+                write!(f, "Error while seeking through file:\n\t{}", ioe),
+            Self::PatchSanityCheckFail(i) =>
+                write!(f, "During patching, sanity check #{} failed", i),
+            Self::FileRenameError(ioe) =>
+                write!(f, "Error renaming file:\n\t{}", ioe),
         }
     }
 }
@@ -91,10 +111,16 @@ impl Error {
             Self::ManifestRequestStatusError(_) => 11,
             Self::BadManifestFormat(_) => 12,
             Self::FileReadFailure(_) => 13,
-            Self::DownloadRequestError(_) => 14,
-            Self::DownloadRequestStatusError(_) => 15,
-            Self::CopyIntoFileError(_) => 16,
-            Self::DecodeError(_) => 17,
+            Self::FileWriteFailure(_) => 14,
+            Self::DownloadRequestError(_) => 15,
+            Self::DownloadRequestStatusError(_) => 16,
+            Self::CopyIntoFileError(_) => 17,
+            Self::DecodeError(_) => 18,
+            Self::BadPatchVersion => 19,
+            Self::BadPatchSize => 20,
+            Self::SeekError(_) => 21,
+            Self::PatchSanityCheckFail(_) => 22,
+            Self::FileRenameError(_) => 23,
         }
     }
 }

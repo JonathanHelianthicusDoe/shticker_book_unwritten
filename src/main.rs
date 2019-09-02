@@ -10,6 +10,7 @@ extern crate sha1;
 
 mod config;
 mod error;
+mod patch;
 mod update;
 
 use clap::{App, Arg};
