@@ -1,11 +1,12 @@
 use crate::{config::Config, error::Error, patch};
-use bzip2::write::BzDecoder;
+use bzip2::write::BzDecoder as BzWriteDecoder;
 use reqwest;
 use serde_json;
 use sha1::{Digest, Sha1};
 use std::{
-    fs::File,
+    fs::{self, File},
     io::{self, prelude::*},
+    os::unix::fs::PermissionsExt,
     path::Path,
 };
 
@@ -13,6 +14,9 @@ pub const BUFFER_SIZE: usize = 0x20_00;
 pub const DEFAULT_ARCH: &str = "linux2";
 
 pub fn update(config: &Config) -> Result<(), Error> {
+    ensure_dir(&config.install_dir)?;
+    ensure_dir(&config.cache_dir)?;
+
     let manifest_map = match get_manifest(config)? {
         serde_json::Value::Object(m) => m,
         _ =>
@@ -73,7 +77,9 @@ pub fn update(config: &Config) -> Result<(), Error> {
         }
 
         println!("        Checking to see if file already exists...");
+
         install_dir.push(file_name);
+
         let already_existing_file = match File::open(&install_dir) {
             Ok(f) => Some(f),
             Err(ioe) => match ioe.kind() {
@@ -156,6 +162,33 @@ pub fn update(config: &Config) -> Result<(), Error> {
         }
 
         install_dir.pop();
+    }
+
+    #[cfg(unix)]
+    {
+        println!("Making sure TTREngine is executable...");
+
+        install_dir.push("TTREngine");
+        let mut ttrengine_perms = fs::metadata(&install_dir)
+            .map_err(|ioe| match ioe.kind() {
+                io::ErrorKind::NotFound => Error::MissingFile("TTREngine"),
+                io::ErrorKind::PermissionDenied =>
+                    Error::PermissionDenied(ioe),
+                _ => Error::UnknownIoError(ioe),
+            })?
+            .permissions();
+        let ttrengine_mode = ttrengine_perms.mode();
+        if (ttrengine_mode & 0o100) == 0 {
+            println!("TTREngine isn't executable, setting executable bit...");
+
+            ttrengine_perms.set_mode(ttrengine_mode | 0o700);
+            fs::set_permissions(&install_dir, ttrengine_perms)
+                .map_err(Error::PermissionsSetFailure)?;
+
+            println!("TTREngine is now executable!");
+        } else {
+            println!("TTREngine is already executable!");
+        }
     }
 
     Ok(())
@@ -412,21 +445,43 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
     to_cache: bool,
     buf: &mut [u8],
     config: &Config,
-    file_name: S,
+    compressed_file_name: S,
     decompressed_file_name: T,
     compressed_sha: &[u8; 20],
     decompressed_sha: &[u8; 20],
     max_tries: usize,
 ) -> Result<(), Error> {
-    let mut dl_uri =
-        String::with_capacity(config.cdn_uri.len() + file_name.as_ref().len());
+    let mut dl_uri = String::with_capacity(
+        config.cdn_uri.len() + compressed_file_name.as_ref().len(),
+    );
     dl_uri += &config.cdn_uri;
-    dl_uri += file_name.as_ref();
+    dl_uri += compressed_file_name.as_ref();
+
+    let compressed_file_path = {
+        let mut pb = if to_cache {
+            config.cache_dir.clone()
+        } else {
+            config.install_dir.clone()
+        };
+        pb.push(compressed_file_name.as_ref());
+
+        pb
+    };
+    let decompressed_file_path = {
+        let mut pb = if to_cache {
+            config.cache_dir.clone()
+        } else {
+            config.install_dir.clone()
+        };
+        pb.push(decompressed_file_name.as_ref());
+
+        pb
+    };
 
     for i in 1..=max_tries {
         println!(
             "        Downloading {} [attempt {}/{}]",
-            file_name.as_ref(),
+            compressed_file_name.as_ref(),
             i,
             max_tries,
         );
@@ -437,27 +492,25 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
             return Err(Error::DownloadRequestStatusError(dl_resp.status()));
         }
 
-        let mut loc = if to_cache {
-            config.cache_dir.clone()
-        } else {
-            config.install_dir.clone()
-        };
-        loc.push(file_name.as_ref());
         {
-            let mut dled_file =
-                File::create(&loc).map_err(|ioe| match ioe.kind() {
+            let mut dled_file = File::create(&compressed_file_path).map_err(
+                |ioe| match ioe.kind() {
                     io::ErrorKind::PermissionDenied =>
                         Error::PermissionDenied(ioe),
                     _ => Error::UnknownIoError(ioe),
-                })?;
+                },
+            )?;
             dl_resp
                 .copy_to(&mut dled_file)
                 .map_err(Error::CopyIntoFileError)?;
         }
 
-        println!("        Checking SHA1 hash of {}", file_name.as_ref());
+        println!(
+            "        Checking SHA1 hash of {}",
+            compressed_file_name.as_ref(),
+        );
 
-        let dled_sha = sha_of_file_by_path(&loc, buf)?;
+        let dled_sha = sha_of_file_by_path(&compressed_file_path, buf)?;
         if &dled_sha != compressed_sha {
             print!("        SHA1 hash mismatch:\n          Local:    ");
             for b in dled_sha.iter() {
@@ -474,14 +527,11 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
 
         println!("        SHA1 hash matches! Extracting...");
 
-        let compressed_path = loc.clone();
-        loc.pop();
-        loc.push(decompressed_file_name.as_ref());
-        decompress_file(buf, &compressed_path, &loc)?;
+        decompress_file(buf, &compressed_file_path, &decompressed_file_path)?;
 
         println!("        Checking SHA1 hash of extracted file...");
 
-        let extracted_sha = sha_of_file_by_path(&loc, buf)?;
+        let extracted_sha = sha_of_file_by_path(&decompressed_file_path, buf)?;
         if &extracted_sha != decompressed_sha {
             print!("        SHA1 hash mismatch:\n          Local:    ");
             for b in extracted_sha.iter() {
@@ -501,6 +551,21 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         break;
     }
 
+    println!("        Deleting compressed version...");
+
+    let mut loc = if to_cache {
+        config.cache_dir.clone()
+    } else {
+        config.install_dir.clone()
+    };
+    loc.push(compressed_file_name.as_ref());
+    fs::remove_file(&loc).map_err(Error::RemoveFileError)?;
+
+    println!(
+        "        {} all done downloading!",
+        decompressed_file_name.as_ref(),
+    );
+
     Ok(())
 }
 
@@ -514,7 +579,7 @@ fn decompress_file<P: AsRef<Path>>(
             io::ErrorKind::PermissionDenied => Error::PermissionDenied(ioe),
             _ => Error::UnknownIoError(ioe),
         })?;
-    let mut decoder = BzDecoder::new(decompressed_file);
+    let mut decoder = BzWriteDecoder::new(decompressed_file);
 
     let mut compressed_file =
         File::open(compressed_path).map_err(|ioe| match ioe.kind() {
@@ -525,10 +590,26 @@ fn decompress_file<P: AsRef<Path>>(
     let mut n = buf.len();
     while n == buf.len() {
         n = compressed_file.read(buf).map_err(Error::FileReadFailure)?;
-        decoder
-            .write_all(buf.as_ref())
-            .map_err(Error::DecodeError)?;
+        decoder.write_all(&buf[..n]).map_err(Error::DecodeError)?;
     }
 
     decoder.finish().map(|_| ()).map_err(Error::DecodeError)
+}
+
+fn ensure_dir<P: AsRef<Path>>(path: P) -> Result<(), Error> {
+    match fs::metadata(&path) {
+        Ok(md) =>
+            if md.is_dir() {
+                Ok(())
+            } else {
+                Err(Error::NotDir(path.as_ref().to_path_buf()))
+            },
+        Err(ioe) => match ioe.kind() {
+            io::ErrorKind::NotFound =>
+                fs::create_dir_all(path).map_err(Error::MkdirFailure),
+            io::ErrorKind::PermissionDenied =>
+                Err(Error::PermissionDenied(ioe)),
+            _ => Err(Error::UnknownIoError(ioe)),
+        },
+    }
 }

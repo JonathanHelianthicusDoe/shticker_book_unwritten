@@ -27,6 +27,11 @@ pub enum Error {
     SeekError(io::Error),
     PatchSanityCheckFail(u8),
     FileRenameError(io::Error),
+    NotDir(PathBuf),
+    RemoveFileError(io::Error),
+    MissingFile(&'static str),
+    PermissionsSetFailure(io::Error),
+    MissingCommandLineArg(&'static str),
 }
 
 impl fmt::Display for Error {
@@ -89,6 +94,17 @@ impl fmt::Display for Error {
                 write!(f, "During patching, sanity check #{} failed", i),
             Self::FileRenameError(ioe) =>
                 write!(f, "Error renaming file:\n\t{}", ioe),
+            Self::NotDir(p) => write!(f, "{} is not a directory", p.display()),
+            Self::RemoveFileError(ioe) =>
+                write!(f, "Error removing file:\n\t{}", ioe),
+            Self::MissingFile(n) => write!(f, "Expected {} file to exist", n),
+            Self::PermissionsSetFailure(ioe) =>
+                write!(f, "Failure to set permissions on file:\n\t{}", ioe),
+            Self::MissingCommandLineArg(a) => write!(
+                f,
+                "Expected the {} command line argument to be present",
+                a
+            ),
         }
     }
 }
@@ -121,6 +137,11 @@ impl Error {
             Self::SeekError(_) => 21,
             Self::PatchSanityCheckFail(_) => 22,
             Self::FileRenameError(_) => 23,
+            Self::NotDir(_) => 24,
+            Self::RemoveFileError(_) => 25,
+            Self::MissingFile(_) => 26,
+            Self::PermissionsSetFailure(_) => 27,
+            Self::MissingCommandLineArg(_) => 28,
         }
     }
 }

@@ -29,41 +29,68 @@ pub struct Account {
     pub password: Option<String>,
 }
 
-pub fn get_config(config_path: Option<&str>) -> Result<Config, Error> {
-    let config_path = if let Some(s) = config_path {
-        PathBuf::from(s)
-    } else {
-        let mut xdg_config_home = String::new();
-        let mut home = String::new();
-
-        for (key, value) in env::vars() {
-            match key.as_str() {
-                "XDG_CONFIG_HOME" => xdg_config_home = value,
-                "HOME" => home = value,
-                _ =>
-                    if !(home.is_empty() || xdg_config_home.is_empty()) {
-                        break;
-                    },
+pub fn get_config(
+    no_config: bool,
+    config_path: Option<&str>,
+    install_path: Option<&str>,
+    cache_path: Option<&str>,
+) -> Result<Config, Error> {
+    let inject_arg_values = |c| {
+        let c = if let Some(ip) = install_path {
+            Config {
+                install_dir: PathBuf::from(ip),
+                ..c
             }
-        }
-
-        if !xdg_config_home.is_empty() {
-            [xdg_config_home.as_str(), crate_name!(), "config.json"]
-                .iter()
-                .collect()
-        } else if !home.is_empty() {
-            [home.as_str(), ".config", crate_name!(), "config.json"]
-                .iter()
-                .collect()
         } else {
-            return Err(Error::NoPossibleConfigPath);
+            c
+        };
+
+        if let Some(cp) = cache_path {
+            Config {
+                cache_dir: PathBuf::from(cp),
+                ..c
+            }
+        } else {
+            c
         }
     };
 
-    match File::open(&config_path) {
-        Ok(f) => serde_json::from_reader(f).map_err(Error::DeserializeError),
-        Err(ioe) =>
-            match ioe.kind() {
+    if !no_config {
+        let config_path = if let Some(s) = config_path {
+            PathBuf::from(s)
+        } else {
+            let mut xdg_config_home = String::new();
+            let mut home = String::new();
+
+            for (key, value) in env::vars() {
+                match key.as_str() {
+                    "XDG_CONFIG_HOME" => xdg_config_home = value,
+                    "HOME" => home = value,
+                    _ =>
+                        if !(home.is_empty() || xdg_config_home.is_empty()) {
+                            break;
+                        },
+                }
+            }
+
+            if !xdg_config_home.is_empty() {
+                [xdg_config_home.as_str(), crate_name!(), "config.json"]
+                    .iter()
+                    .collect()
+            } else if !home.is_empty() {
+                [home.as_str(), ".config", crate_name!(), "config.json"]
+                    .iter()
+                    .collect()
+            } else {
+                return Err(Error::NoPossibleConfigPath);
+            }
+        };
+
+        match File::open(&config_path) {
+            Ok(f) => serde_json::from_reader(f)
+                .map_err(Error::DeserializeError)
+                .map(inject_arg_values),
+            Err(ioe) => match ioe.kind() {
                 io::ErrorKind::NotFound => {
                     fs::create_dir_all(config_path.parent().ok_or_else(
                         || Error::BadConfigPath(config_path.clone()),
@@ -84,12 +111,28 @@ pub fn get_config(config_path: Option<&str>) -> Result<Config, Error> {
                     )
                     .map_err(Error::SerializeError)?;
 
-                    Ok(new_config)
+                    Ok(inject_arg_values(new_config))
                 },
                 io::ErrorKind::PermissionDenied =>
                     Err(Error::PermissionDenied(ioe)),
                 _ => Err(Error::UnknownIoError(ioe)),
             },
+        }
+    } else {
+        Ok(Config {
+            install_dir:     PathBuf::from(install_path.ok_or_else(|| {
+                Error::MissingCommandLineArg("--install-dir")
+            })?),
+            cache_dir:       PathBuf::from(
+                cache_path.ok_or_else(|| {
+                    Error::MissingCommandLineArg("--cache-dir")
+                })?,
+            ),
+            manifest_uri:    DEFAULT_MANIFEST_URI.to_owned(),
+            cdn_uri:         DEFAULT_CDN_URI.to_owned(),
+            store_passwords: false,
+            accounts:        Vec::new(),
+        })
     }
 }
 

@@ -54,6 +54,7 @@ fn run() -> Result<(), Error> {
                 .aliases(&["no-conf", "no-configuration"])
                 .help("Don't read or write any config files")
                 .takes_value(false)
+                .requires_all(&["install-dir", "cache-dir"])
                 .conflicts_with("config"),
         )
         .arg(
@@ -89,7 +90,12 @@ fn run() -> Result<(), Error> {
         )
         .get_matches();
 
-    let config = config::get_config(arg_matches.value_of("CONFIG_FILE"))?;
+    let config = config::get_config(
+        arg_matches.is_present("no-config"),
+        arg_matches.value_of("CONFIG_FILE"),
+        arg_matches.value_of("INSTALL_DIR"),
+        arg_matches.value_of("CACHE_DIR"),
+    )?;
 
     update::update(&config)?;
 
