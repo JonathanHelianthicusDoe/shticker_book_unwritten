@@ -8,6 +8,7 @@ extern crate serde;
 extern crate serde_json;
 extern crate sha1;
 
+mod command;
 mod config;
 mod error;
 mod patch;
@@ -88,6 +89,17 @@ fn run() -> Result<(), Error> {
                 )
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("no-auto-update")
+                .short("n")
+                .long("no-auto-update")
+                .help("Suppress auto-update behavior")
+                .long_help(
+                    "Suppresses auto-updating, although you can still decide \
+                     to update via the \"update\"/\"up\" command.",
+                )
+                .takes_value(false),
+        )
         .get_matches();
 
     let config = config::get_config(
@@ -97,7 +109,13 @@ fn run() -> Result<(), Error> {
         arg_matches.value_of("CACHE_DIR"),
     )?;
 
-    update::update(&config)?;
+    if !arg_matches.is_present("no-auto-update") {
+        update::update(&config)?;
+
+        println!();
+    }
+
+    command::enter_command_mode(&config)?;
 
     Ok(())
 }
