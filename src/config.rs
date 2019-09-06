@@ -20,13 +20,7 @@ pub struct Config {
     pub manifest_uri:    String,
     pub cdn_uri:         String,
     pub store_passwords: bool,
-    pub accounts:        Vec<Account>,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct Account {
-    pub username: String,
-    pub password: Option<String>,
+    pub accounts:        serde_json::Map<String, serde_json::Value>,
 }
 
 pub fn get_config(
@@ -95,7 +89,7 @@ pub fn get_config(
                     fs::create_dir_all(config_path.parent().ok_or_else(
                         || Error::BadConfigPath(config_path.clone()),
                     )?)
-                    .map_err(Error::MkdirFailure)?;
+                    .map_err(Error::MkdirError)?;
 
                     let mut new_config_file = File::create(&config_path)
                         .map_err(|ioe| match ioe.kind() {
@@ -131,7 +125,7 @@ pub fn get_config(
             manifest_uri:    DEFAULT_MANIFEST_URI.to_owned(),
             cdn_uri:         DEFAULT_CDN_URI.to_owned(),
             store_passwords: false,
-            accounts:        Vec::new(),
+            accounts:        serde_json::Map::default(),
         })
     }
 }
@@ -182,7 +176,7 @@ fn prompt_for_config_values<P: AsRef<Path>>(
                 manifest_uri:    DEFAULT_MANIFEST_URI.to_owned(),
                 cdn_uri:         DEFAULT_CDN_URI.to_owned(),
                 store_passwords: yes_no_trimmed == "yes",
-                accounts:        Vec::new(),
+                accounts:        serde_json::Map::default(),
             });
         }
 

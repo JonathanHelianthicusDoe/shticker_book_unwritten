@@ -4,6 +4,7 @@
 extern crate clap;
 extern crate bzip2;
 extern crate reqwest;
+extern crate rpassword;
 extern crate serde;
 extern crate serde_json;
 extern crate sha1;
@@ -11,11 +12,13 @@ extern crate sha1;
 mod command;
 mod config;
 mod error;
+mod login;
 mod patch;
 mod update;
 
 use clap::{App, Arg};
 use error::Error;
+use reqwest::ClientBuilder;
 use std::process;
 
 fn main() {
@@ -109,13 +112,17 @@ fn run() -> Result<(), Error> {
         arg_matches.value_of("CACHE_DIR"),
     )?;
 
+    let client = ClientBuilder::new()
+        .build()
+        .map_err(Error::HttpClientCreateError)?;
+
     if !arg_matches.is_present("no-auto-update") {
-        update::update(&config)?;
+        update::update(&config, &client)?;
 
         println!();
     }
 
-    command::enter_command_mode(&config)?;
+    command::enter_command_mode(&config, &client)?;
 
     Ok(())
 }

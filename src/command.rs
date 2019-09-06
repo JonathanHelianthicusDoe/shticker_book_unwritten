@@ -1,4 +1,5 @@
-use crate::{config::Config, error::Error, update};
+use crate::{config::Config, error::Error, login, update};
+use reqwest;
 use std::io::{self, prelude::*};
 
 enum Command {
@@ -36,7 +37,10 @@ const ABOUT_TEXT: &str = concat!(
     ">\n",
 );
 
-pub fn enter_command_mode(config: &Config) -> Result<(), Error> {
+pub fn enter_command_mode(
+    config: &Config,
+    client: &reqwest::Client,
+) -> Result<(), Error> {
     println!(concat!(
         "Welcome to ",
         crate_name!(),
@@ -67,8 +71,9 @@ pub fn enter_command_mode(config: &Config) -> Result<(), Error> {
             Some("help") | Some("?") => help(),
             Some("about") => about(),
             Some("quit") | Some("exit") => break,
-            Some("update") | Some("up") => update::update(config)?,
-            Some("login") | Some("play") | Some("launch") => unimplemented!(),
+            Some("update") | Some("up") => update::update(config, client)?,
+            Some("login") | Some("play") | Some("launch") =>
+                login::login(config, client, argv)?,
             Some("instances") | Some("running") => unimplemented!(),
             Some("kill") | Some("close") => unimplemented!(),
             Some("accounts") | Some("logins") => unimplemented!(),

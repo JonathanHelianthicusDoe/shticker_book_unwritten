@@ -13,11 +13,11 @@ use std::{
 pub const BUFFER_SIZE: usize = 0x20_00;
 pub const DEFAULT_ARCH: &str = "linux2";
 
-pub fn update(config: &Config) -> Result<(), Error> {
+pub fn update(config: &Config, client: &reqwest::Client) -> Result<(), Error> {
     ensure_dir(&config.install_dir)?;
     ensure_dir(&config.cache_dir)?;
 
-    let manifest_map = match get_manifest(config)? {
+    let manifest_map = match get_manifest(config, client)? {
         serde_json::Value::Object(m) => m,
         _ =>
             return Err(Error::BadManifestFormat(
@@ -137,6 +137,7 @@ pub fn update(config: &Config) -> Result<(), Error> {
                         false,
                         &mut file_buf,
                         config,
+                        client,
                         compressed_file_name,
                         file_name,
                         &compressed_sha,
@@ -154,6 +155,7 @@ pub fn update(config: &Config) -> Result<(), Error> {
         if let Some(f) = already_existing_file {
             update_existing_file(
                 config,
+                client,
                 f,
                 file_map,
                 file_name,
@@ -183,7 +185,7 @@ pub fn update(config: &Config) -> Result<(), Error> {
 
             ttrengine_perms.set_mode(ttrengine_mode | 0o700);
             fs::set_permissions(&install_dir, ttrengine_perms)
-                .map_err(Error::PermissionsSetFailure)?;
+                .map_err(Error::PermissionsSetError)?;
 
             println!("TTREngine is now executable!");
         } else {
@@ -196,6 +198,7 @@ pub fn update(config: &Config) -> Result<(), Error> {
 
 fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
     config: &Config,
+    client: &reqwest::Client,
     mut already_existing_file: File,
     file_map: &serde_json::Map<String, serde_json::Value>,
     file_name: S,
@@ -285,6 +288,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
             true,
             &mut file_buf,
             config,
+            client,
             patch_file_name,
             &extracted_patch_file_name,
             &patch_map
@@ -357,6 +361,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
             false,
             &mut file_buf,
             config,
+            client,
             compressed_file_name,
             file_name,
             &compressed_sha,
@@ -368,8 +373,13 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
     Ok(())
 }
 
-fn get_manifest(config: &Config) -> Result<serde_json::Value, Error> {
-    let mut manifest_resp = reqwest::get(&config.manifest_uri)
+fn get_manifest(
+    config: &Config,
+    client: &reqwest::Client,
+) -> Result<serde_json::Value, Error> {
+    let mut manifest_resp = client
+        .get(&config.manifest_uri)
+        .send()
         .map_err(Error::ManifestRequestError)?;
     if !manifest_resp.status().is_success() {
         return Err(Error::ManifestRequestStatusError(manifest_resp.status()));
@@ -388,7 +398,7 @@ fn sha_of_reader<R: Read>(
     let mut sha = Sha1::default();
     let mut n = buf.len();
     while n == buf.len() {
-        n = r.read(buf).map_err(Error::FileReadFailure)?;
+        n = r.read(buf).map_err(Error::FileReadError)?;
         sha.input(&buf[..n]);
     }
 
@@ -407,7 +417,7 @@ fn sha_of_file_by_path<P: AsRef<Path>>(
     let mut sha = Sha1::default();
     let mut n = buf.len();
     while n == buf.len() {
-        n = file.read(buf).map_err(Error::FileReadFailure)?;
+        n = file.read(buf).map_err(Error::FileReadError)?;
         sha.input(&buf[..n]);
     }
 
@@ -445,6 +455,7 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
     to_cache: bool,
     buf: &mut [u8],
     config: &Config,
+    client: &reqwest::Client,
     compressed_file_name: S,
     decompressed_file_name: T,
     compressed_sha: &[u8; 20],
@@ -486,8 +497,10 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
             max_tries,
         );
 
-        let mut dl_resp =
-            reqwest::get(&dl_uri).map_err(Error::DownloadRequestError)?;
+        let mut dl_resp = client
+            .get(&dl_uri)
+            .send()
+            .map_err(Error::DownloadRequestError)?;
         if !dl_resp.status().is_success() {
             return Err(Error::DownloadRequestStatusError(dl_resp.status()));
         }
@@ -589,7 +602,7 @@ fn decompress_file<P: AsRef<Path>>(
 
     let mut n = buf.len();
     while n == buf.len() {
-        n = compressed_file.read(buf).map_err(Error::FileReadFailure)?;
+        n = compressed_file.read(buf).map_err(Error::FileReadError)?;
         decoder.write_all(&buf[..n]).map_err(Error::DecodeError)?;
     }
 
@@ -606,7 +619,7 @@ fn ensure_dir<P: AsRef<Path>>(path: P) -> Result<(), Error> {
             },
         Err(ioe) => match ioe.kind() {
             io::ErrorKind::NotFound =>
-                fs::create_dir_all(path).map_err(Error::MkdirFailure),
+                fs::create_dir_all(path).map_err(Error::MkdirError),
             io::ErrorKind::PermissionDenied =>
                 Err(Error::PermissionDenied(ioe)),
             _ => Err(Error::UnknownIoError(ioe)),

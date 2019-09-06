@@ -39,7 +39,7 @@ fn bsdiff_patch<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
             io::ErrorKind::PermissionDenied => Error::PermissionDenied(ioe),
             _ => Error::UnknownIoError(ioe),
         })?;
-    fd.write_all(&new_[..]).map_err(Error::FileWriteFailure)?;
+    fd.write_all(&new_[..]).map_err(Error::FileWriteError)?;
 
     Ok(())
 }
@@ -77,7 +77,7 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
 
         // Read header
         let mut header = [0u8; 32];
-        f.read_exact(&mut header).map_err(Error::FileReadFailure)?;
+        f.read_exact(&mut header).map_err(Error::FileReadError)?;
 
         header
     };
@@ -131,7 +131,7 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
     fd.seek(SeekFrom::Start(0)).map_err(Error::SeekError)?;
     let old_len = old.len();
     fd.read_exact(&mut old[..old_len - 1])
-        .map_err(Error::FileReadFailure)?;
+        .map_err(Error::FileReadError)?;
 
     let mut new_ = Vec::with_capacity(newsize as usize + 1);
     new_.resize_with(newsize as usize + 1, Default::default);
