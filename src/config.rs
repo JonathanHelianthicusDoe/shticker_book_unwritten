@@ -23,6 +23,22 @@ pub struct Config {
     pub accounts:        serde_json::Map<String, serde_json::Value>,
 }
 
+impl Config {
+    /// Same return type as `BTreeMap::insert`.
+    pub fn add_account(
+        &mut self,
+        username: String,
+        password: String,
+    ) -> Option<serde_json::Value> {
+        if self.store_passwords {
+            self.accounts
+                .insert(username, serde_json::Value::String(password))
+        } else {
+            self.accounts.insert(username, serde_json::Value::Null)
+        }
+    }
+}
+
 pub fn get_config(
     no_config: bool,
     config_path: Option<&str>,

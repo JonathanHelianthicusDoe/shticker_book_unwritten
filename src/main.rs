@@ -105,7 +105,7 @@ fn run() -> Result<(), Error> {
         )
         .get_matches();
 
-    let config = config::get_config(
+    let mut config = config::get_config(
         arg_matches.is_present("no-config"),
         arg_matches.value_of("CONFIG_FILE"),
         arg_matches.value_of("INSTALL_DIR"),
@@ -122,7 +122,7 @@ fn run() -> Result<(), Error> {
         println!();
     }
 
-    command::enter_command_mode(&config, &client)?;
+    command::enter_command_mode(&mut config, &client)?;
 
     Ok(())
 }

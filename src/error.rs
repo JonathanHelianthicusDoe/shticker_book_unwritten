@@ -38,6 +38,9 @@ pub enum Error {
     PostError(reqwest::Error),
     BadLoginResponse(&'static str),
     UnexpectedSuccessValue(String),
+    SetWorkingDirError(io::Error),
+    ThreadSpawnError(io::Error),
+    ThreadJoinError(io::Error),
 }
 
 impl fmt::Display for Error {
@@ -122,6 +125,15 @@ impl fmt::Display for Error {
                 write!(f, "Bad login response:\n\t{}", blr),
             Self::UnexpectedSuccessValue(usv) =>
                 write!(f, "Unexpected \"success\" value: {}", usv),
+            Self::SetWorkingDirError(ioe) => write!(
+                f,
+                "Error while setting current working directory:\n\t{}",
+                ioe,
+            ),
+            Self::ThreadSpawnError(ioe) =>
+                write!(f, "Error spawning thread:\n\t{}", ioe),
+            Self::ThreadJoinError(ioe) =>
+                write!(f, "Error attempting to join thread:\n\t{}", ioe),
         }
     }
 }
@@ -165,6 +177,9 @@ impl Error {
             Self::PostError(_) => 32,
             Self::BadLoginResponse(_) => 33,
             Self::UnexpectedSuccessValue(_) => 34,
+            Self::SetWorkingDirError(_) => 35,
+            Self::ThreadSpawnError(_) => 36,
+            Self::ThreadJoinError(_) => 37,
         }
     }
 }

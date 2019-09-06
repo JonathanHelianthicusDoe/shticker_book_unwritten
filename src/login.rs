@@ -4,7 +4,11 @@ use rpassword;
 use serde::Serialize;
 use std::{
     collections::BTreeMap,
+    env,
+    ffi::OsStr,
     io::{self, Write},
+    path::PathBuf,
+    process,
     thread,
     time::Duration,
 };
@@ -13,10 +17,10 @@ const LOGIN_API_URI: &str =
     "https://www.toontownrewritten.com/api/login?format=json";
 
 pub fn login<'a, A: Iterator<Item = &'a str>>(
-    config: &Config,
+    config: &mut Config,
     client: &reqwest::Client,
     mut argv: A,
-) -> Result<(), Error> {
+) -> Result<Option<(String, process::Child)>, Error> {
     let (mut username_buf, mut password_buf) = (String::new(), String::new());
 
     let (username, password) = if let Some(username) = argv.next() {
@@ -75,15 +79,58 @@ pub fn login<'a, A: Iterator<Item = &'a str>>(
     let mut params = BTreeMap::new();
     params.insert("username", username);
     params.insert("password", password);
-    handle_login_negotiation(client, post_to_login_api(client, &params)?)?;
+    if let Some(response_json) =
+        handle_login_negotiation(client, post_to_login_api(client, &params)?)?
+    {
+        let username = if username_buf.is_empty() {
+            username.to_owned()
+        } else {
+            username_buf
+        };
+        let password = if password_buf.is_empty() {
+            password.to_owned()
+        } else {
+            password_buf
+        };
+        if config.add_account(username.clone(), password).is_none() {
+            println!("New account saved in config!");
+        }
 
-    unimplemented!()
+        let play_cookie = response_json
+            .get("cookie")
+            .and_then(|val| {
+                if let serde_json::Value::String(c) = val {
+                    Some(c)
+                } else {
+                    None
+                }
+            })
+            .ok_or(Error::BadLoginResponse(
+                "Expected \"cookie\" key with String value",
+            ))?;
+        let game_server = response_json
+            .get("gameserver")
+            .and_then(|val| {
+                if let serde_json::Value::String(gs) = val {
+                    Some(gs)
+                } else {
+                    None
+                }
+            })
+            .ok_or(Error::BadLoginResponse(
+                "Expected \"gameserver\" key with String value",
+            ))?;
+
+        launch(config, play_cookie, game_server).map(|c| Some((username, c)))
+    } else {
+        Ok(None)
+    }
 }
 
 fn handle_login_negotiation(
     client: &reqwest::Client,
     mut response_json: serde_json::Value,
-) -> Result<(), Error> {
+) -> Result<Option<serde_json::Value>, Error> {
     loop {
         let success = response_json
             .get("success")
@@ -103,9 +150,9 @@ fn handle_login_negotiation(
 
         match success {
             "true" => {
-                println!("Login success!");
+                println!("Authentication success!");
 
-                break;
+                return Ok(Some(response_json));
             },
             "delayed" => response_json = enqueue(client, &response_json)?,
             "partial" =>
@@ -113,7 +160,7 @@ fn handle_login_negotiation(
                     if let Some(rj) = do_2fa(client, &response_json)? {
                         rj
                     } else {
-                        break;
+                        return Ok(None);
                     },
             "false" => {
                 println!(
@@ -132,14 +179,12 @@ fn handle_login_negotiation(
                         ))?,
                 );
 
-                break;
+                return Ok(None);
             },
             _ =>
                 return Err(Error::UnexpectedSuccessValue(success.to_owned())),
         }
     }
-
-    Ok(())
 }
 
 /// Return value is `Ok(None)` if cancelled by user.
@@ -259,4 +304,22 @@ fn post_to_login_api<K: Ord + Serialize, V: Serialize>(
             .map_err(Error::PostError)?,
     )
     .map_err(Error::DeserializeError)
+}
+
+fn launch<S: AsRef<OsStr>, T: AsRef<OsStr>>(
+    config: &Config,
+    play_cookie: S,
+    game_server: T,
+) -> Result<process::Child, Error> {
+    println!("Launching the game...");
+
+    process::Command::new("./TTREngine")
+        .current_dir(&config.install_dir)
+        .env("TTR_PLAYCOOKIE", play_cookie)
+        .env("TTR_GAMESERVER", game_server)
+        .stdin(process::Stdio::null())
+        .stdout(process::Stdio::null())
+        .stderr(process::Stdio::null())
+        .spawn()
+        .map_err(Error::ThreadSpawnError)
 }

@@ -1,17 +1,9 @@
 use crate::{config::Config, error::Error, login, update};
 use reqwest;
-use std::io::{self, prelude::*};
-
-enum Command {
-    Help,
-    About,
-    Quit,
-    Update,
-    Login,
-    ViewInstances,
-    KillInstance,
-    SavedLogins,
-}
+use std::{
+    io::{self, prelude::*},
+    process,
+};
 
 const HELP_TEXT: &str = "\
 Commands
@@ -38,7 +30,7 @@ const ABOUT_TEXT: &str = concat!(
 );
 
 pub fn enter_command_mode(
-    config: &Config,
+    config: &mut Config,
     client: &reqwest::Client,
 ) -> Result<(), Error> {
     println!(concat!(
@@ -48,6 +40,8 @@ pub fn enter_command_mode(
     ));
 
     let mut command_buf = String::with_capacity(0x10);
+    let mut children = Vec::with_capacity(2);
+
     loop {
         print!("> ");
         io::stdout().flush().map_err(Error::StdoutError)?;
@@ -68,12 +62,56 @@ pub fn enter_command_mode(
             .filter(|arg| !arg.is_empty());
         match argv.next() {
             None => (),
-            Some("help") | Some("?") => help(),
-            Some("about") => about(),
-            Some("quit") | Some("exit") => break,
-            Some("update") | Some("up") => update::update(config, client)?,
-            Some("login") | Some("play") | Some("launch") =>
-                login::login(config, client, argv)?,
+            Some("help") | Some("?") => {
+                help();
+                check_children(&mut children)?;
+            },
+            Some("about") => {
+                about();
+                check_children(&mut children)?;
+            },
+            Some("quit") | Some("exit") => {
+                check_children(&mut children)?;
+                if children.is_empty() {
+                    break;
+                } else if children.len() == 1 {
+                    print!(
+                        "Are you sure are you want to exit? There's still a \
+                         game instance running! [y/n]\n> ",
+                    );
+                } else {
+                    print!(
+                        "Are you sure are you want to exit? There are still \
+                         {} game instances running! [y/n]\n> ",
+                        children.len(),
+                    );
+                }
+            },
+            Some("update") | Some("up") => {
+                check_children(&mut children)?;
+                if children.is_empty() {
+                    update::update(config, client)?
+                } else if children.len() == 1 {
+                    println!(
+                        "There's still a game instance running, can't update \
+                         now!",
+                    );
+                } else {
+                    println!(
+                        "There are still {} game instances running, can't \
+                         update now!",
+                        children.len(),
+                    );
+                }
+            },
+            Some("login") | Some("play") | Some("launch") => {
+                if let Some(c) = login::login(config, client, argv)? {
+                    children.push(c);
+
+                    println!("Game launched successfully!");
+                }
+                check_children(&mut children)?;
+            },
             Some("instances") | Some("running") => unimplemented!(),
             Some("kill") | Some("close") => unimplemented!(),
             Some("accounts") | Some("logins") => unimplemented!(),
@@ -93,4 +131,34 @@ fn help() {
 
 fn about() {
     print!("{}", ABOUT_TEXT);
+}
+
+/// Naive implementation because, let's be real, how many instances of the game
+/// are you really going to run concurrently?
+fn check_children(
+    children: &mut Vec<(String, process::Child)>,
+) -> Result<(), Error> {
+    let mut i = 0;
+    while let Some((username, child)) = children.get_mut(i) {
+        if let Some(exit_status) =
+            child.try_wait().map_err(Error::ThreadJoinError)?
+        {
+            if exit_status.success() {
+                println!("{}'s instance exited normally.", username);
+            } else if let Some(exit_code) = exit_status.code() {
+                println!(
+                    "{}'s instance exited abnormally. Exit code: {}",
+                    username, exit_code,
+                );
+            } else {
+                println!("{}'s instance was killed by a signal.", username);
+            }
+
+            children.remove(i);
+        } else {
+            i += 1;
+        }
+    }
+
+    Ok(())
 }
