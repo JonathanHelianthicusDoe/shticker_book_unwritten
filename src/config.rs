@@ -44,7 +44,7 @@ pub fn get_config(
     config_path: Option<&str>,
     install_path: Option<&str>,
     cache_path: Option<&str>,
-) -> Result<Config, Error> {
+) -> Result<(Config, PathBuf), Error> {
     let inject_arg_values = |c| {
         let c = if let Some(ip) = install_path {
             Config {
@@ -99,7 +99,7 @@ pub fn get_config(
         match File::open(&config_path) {
             Ok(f) => serde_json::from_reader(f)
                 .map_err(Error::DeserializeError)
-                .map(inject_arg_values),
+                .map(|c| (inject_arg_values(c), config_path)),
             Err(ioe) => match ioe.kind() {
                 io::ErrorKind::NotFound => {
                     fs::create_dir_all(config_path.parent().ok_or_else(
@@ -121,7 +121,7 @@ pub fn get_config(
                     )
                     .map_err(Error::SerializeError)?;
 
-                    Ok(inject_arg_values(new_config))
+                    Ok((inject_arg_values(new_config), config_path))
                 },
                 io::ErrorKind::PermissionDenied =>
                     Err(Error::PermissionDenied(ioe)),
@@ -129,20 +129,21 @@ pub fn get_config(
             },
         }
     } else {
-        Ok(Config {
-            install_dir:     PathBuf::from(install_path.ok_or_else(|| {
-                Error::MissingCommandLineArg("--install-dir")
-            })?),
-            cache_dir:       PathBuf::from(
-                cache_path.ok_or_else(|| {
-                    Error::MissingCommandLineArg("--cache-dir")
-                })?,
-            ),
-            manifest_uri:    DEFAULT_MANIFEST_URI.to_owned(),
-            cdn_uri:         DEFAULT_CDN_URI.to_owned(),
-            store_passwords: false,
-            accounts:        serde_json::Map::default(),
-        })
+        Ok((
+            Config {
+                install_dir:     PathBuf::from(install_path.ok_or_else(
+                    || Error::MissingCommandLineArg("--install-dir"),
+                )?),
+                cache_dir:       PathBuf::from(cache_path.ok_or_else(
+                    || Error::MissingCommandLineArg("--cache-dir"),
+                )?),
+                manifest_uri:    DEFAULT_MANIFEST_URI.to_owned(),
+                cdn_uri:         DEFAULT_CDN_URI.to_owned(),
+                store_passwords: false,
+                accounts:        serde_json::Map::default(),
+            },
+            PathBuf::new(),
+        ))
     }
 }
 
@@ -204,4 +205,18 @@ fn prompt_for_config_values<P: AsRef<Path>>(
             .map_err(Error::StdinError)?;
         yes_no.make_ascii_lowercase();
     }
+}
+
+pub fn commit_config<P: AsRef<Path>>(
+    config: &Config,
+    config_path: P,
+) -> Result<(), Error> {
+    let mut config_file =
+        File::create(&config_path).map_err(|ioe| match ioe.kind() {
+            io::ErrorKind::PermissionDenied => Error::PermissionDenied(ioe),
+            _ => Error::UnknownIoError(ioe),
+        })?;
+
+    serde_json::to_writer_pretty(&mut config_file, config)
+        .map_err(Error::SerializeError)
 }

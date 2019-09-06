@@ -32,15 +32,14 @@ pub enum Error {
     MissingFile(&'static str),
     PermissionsSetError(io::Error),
     MissingCommandLineArg(&'static str),
-    MissingArg(&'static str),
     PasswordReadError(io::Error),
     HttpClientCreateError(reqwest::Error),
     PostError(reqwest::Error),
     BadLoginResponse(&'static str),
     UnexpectedSuccessValue(String),
-    SetWorkingDirError(io::Error),
     ThreadSpawnError(io::Error),
     ThreadJoinError(io::Error),
+    ProcessKillError(io::Error),
 }
 
 impl fmt::Display for Error {
@@ -114,7 +113,6 @@ impl fmt::Display for Error {
                 "Expected the {} command line argument to be present",
                 a,
             ),
-            Self::MissingArg(a) => write!(f, "Expected the {} argument", a),
             Self::PasswordReadError(ioe) =>
                 write!(f, "Error reading password:\n\t{}", ioe),
             Self::HttpClientCreateError(hcce) =>
@@ -125,15 +123,12 @@ impl fmt::Display for Error {
                 write!(f, "Bad login response:\n\t{}", blr),
             Self::UnexpectedSuccessValue(usv) =>
                 write!(f, "Unexpected \"success\" value: {}", usv),
-            Self::SetWorkingDirError(ioe) => write!(
-                f,
-                "Error while setting current working directory:\n\t{}",
-                ioe,
-            ),
             Self::ThreadSpawnError(ioe) =>
                 write!(f, "Error spawning thread:\n\t{}", ioe),
             Self::ThreadJoinError(ioe) =>
                 write!(f, "Error attempting to join thread:\n\t{}", ioe),
+            Self::ProcessKillError(ioe) =>
+                write!(f, "Error killing child process:\n\t{}", ioe),
         }
     }
 }
@@ -171,15 +166,14 @@ impl Error {
             Self::MissingFile(_) => 26,
             Self::PermissionsSetError(_) => 27,
             Self::MissingCommandLineArg(_) => 28,
-            Self::MissingArg(_) => 29,
-            Self::PasswordReadError(_) => 30,
-            Self::HttpClientCreateError(_) => 31,
-            Self::PostError(_) => 32,
-            Self::BadLoginResponse(_) => 33,
-            Self::UnexpectedSuccessValue(_) => 34,
-            Self::SetWorkingDirError(_) => 35,
-            Self::ThreadSpawnError(_) => 36,
-            Self::ThreadJoinError(_) => 37,
+            Self::PasswordReadError(_) => 29,
+            Self::HttpClientCreateError(_) => 30,
+            Self::PostError(_) => 31,
+            Self::BadLoginResponse(_) => 32,
+            Self::UnexpectedSuccessValue(_) => 33,
+            Self::ThreadSpawnError(_) => 34,
+            Self::ThreadJoinError(_) => 35,
+            Self::ProcessKillError(_) => 36,
         }
     }
 }

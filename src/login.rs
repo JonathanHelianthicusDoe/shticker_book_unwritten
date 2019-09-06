@@ -4,13 +4,11 @@ use rpassword;
 use serde::Serialize;
 use std::{
     collections::BTreeMap,
-    env,
     ffi::OsStr,
     io::{self, Write},
-    path::PathBuf,
     process,
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 const LOGIN_API_URI: &str =
@@ -19,24 +17,35 @@ const LOGIN_API_URI: &str =
 pub fn login<'a, A: Iterator<Item = &'a str>>(
     config: &mut Config,
     client: &reqwest::Client,
-    mut argv: A,
-) -> Result<Option<(String, process::Child)>, Error> {
+    argv: A,
+) -> Result<Option<(String, process::Child, Instant)>, Error> {
+    let (mut maybe_username, mut nosave) = (None, false);
+    for arg in argv {
+        match arg {
+            "-n" | "--no-save" => nosave = true,
+            _ =>
+                if maybe_username.is_some() {
+                    println!("Unexpected argument: {}", arg);
+
+                    return Ok(None);
+                } else {
+                    maybe_username = Some(arg);
+                },
+        }
+    }
+
     let (mut username_buf, mut password_buf) = (String::new(), String::new());
 
-    let (username, password) = if let Some(username) = argv.next() {
-        if let Some(password) = argv.next() {
-            (username, password)
-        } else if let Some(password) =
-            config.accounts.get(username).and_then(|val| {
-                if let serde_json::Value::String(p) = val {
-                    println!("Using saved password...");
+    let (username, password) = if let Some(username) = maybe_username {
+        if let Some(password) = config.accounts.get(username).and_then(|val| {
+            if let serde_json::Value::String(p) = val {
+                println!("Using saved password...");
 
-                    Some(p)
-                } else {
-                    None
-                }
-            })
-        {
+                Some(p)
+            } else {
+                None
+            }
+        }) {
             (username, password.as_str())
         } else {
             password_buf =
@@ -87,13 +96,15 @@ pub fn login<'a, A: Iterator<Item = &'a str>>(
         } else {
             username_buf
         };
-        let password = if password_buf.is_empty() {
-            password.to_owned()
-        } else {
-            password_buf
-        };
-        if config.add_account(username.clone(), password).is_none() {
-            println!("New account saved in config!");
+        if !nosave {
+            let password = if password_buf.is_empty() {
+                password.to_owned()
+            } else {
+                password_buf
+            };
+            if config.add_account(username.clone(), password).is_none() {
+                println!("New account saved in config!");
+            }
         }
 
         let play_cookie = response_json
@@ -121,7 +132,8 @@ pub fn login<'a, A: Iterator<Item = &'a str>>(
                 "Expected \"gameserver\" key with String value",
             ))?;
 
-        launch(config, play_cookie, game_server).map(|c| Some((username, c)))
+        launch(config, play_cookie, game_server)
+            .map(|c| Some((username, c, Instant::now())))
     } else {
         Ok(None)
     }
