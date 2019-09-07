@@ -1,3 +1,41 @@
+//! The code in this module has been adapted more or less line-for-line from
+//! the source of bsdiff 4.3, which is written in C and is here "oxidized" on a
+//! very basic level, even retaining the original variable names, and is not
+//! (yet) idiomatic or optimized or anything like that.
+//!
+//! bsdiff4 is licensed under a slight variation of the FreeBSD license, which
+//! requires that the licensing text be reproduced alongside any modified or
+//! unmodified redistributions. So here it is (the same text can be found in
+//! the LICENSE.bsdiff4 file):
+//!
+//! ```c
+//! /*-
+//!  * Copyright 2003-2005 Colin Percival
+//!  * All rights reserved
+//!  *
+//!  * Redistribution and use in source and binary forms, with or without
+//!  * modification, are permitted providing that the following conditions
+//!  * are met:
+//!  * 1. Redistributions of source code must retain the above copyright
+//!  *    notice, this list of conditions and the following disclaimer.
+//!  * 2. Redistributions in binary form must reproduce the above copyright
+//!  *    notice, this list of conditions and the following disclaimer in the
+//!  *    documentation and/or other materials provided with the distribution.
+//!  *
+//!  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+//!  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//!  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+//!  * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+//!  * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+//!  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+//!  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+//!  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+//!  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+//!  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+//!  * POSSIBILITY OF SUCH DAMAGE.
+//!  */
+//! ```
+
 use crate::error::Error;
 use bzip2::read::BzDecoder as BzReadDecoder;
 use std::{
@@ -31,7 +69,7 @@ fn bsdiff_patch<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
     old_file_path: Q,
     new_file_path: R,
 ) -> Result<(), Error> {
-    let new_ = apply_patch(patch_file_path, old_file_path)?;
+    let new = apply_patch(patch_file_path, old_file_path)?;
 
     // Write the new file
     let mut fd =
@@ -39,7 +77,7 @@ fn bsdiff_patch<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
             io::ErrorKind::PermissionDenied => Error::PermissionDenied(ioe),
             _ => Error::UnknownIoError(ioe),
         })?;
-    fd.write_all(&new_[..]).map_err(Error::FileWriteError)?;
+    fd.write_all(&new[..]).map_err(Error::FileWriteError)?;
 
     Ok(())
 }
@@ -133,8 +171,8 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
     fd.read_exact(&mut old[..old_len - 1])
         .map_err(Error::FileReadError)?;
 
-    let mut new_ = Vec::with_capacity(newsize as usize + 1);
-    new_.resize_with(newsize as usize + 1, Default::default);
+    let mut new = Vec::with_capacity(newsize as usize + 1);
+    new.resize_with(newsize as usize + 1, Default::default);
 
     // Start the actual patching
     let mut buf = [0u8; 8];
@@ -155,15 +193,13 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
 
         // Read diff string
         dpfbz2
-            .read_exact(
-                &mut new_[newpos as usize..(newpos + ctrl[0]) as usize],
-            )
+            .read_exact(&mut new[newpos as usize..(newpos + ctrl[0]) as usize])
             .map_err(Error::DecodeError)?;
 
         // Add old data to diff string
         for i in 0..ctrl[0] {
             if (oldpos + i >= 0) && (oldpos + i < oldsize) {
-                new_[(newpos + i) as usize] += old[(oldpos + i) as usize];
+                new[(newpos + i) as usize] += old[(oldpos + i) as usize];
             }
         }
 
@@ -178,9 +214,7 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
 
         // Read extra string
         epfbz2
-            .read_exact(
-                &mut new_[newpos as usize..(newpos + ctrl[1]) as usize],
-            )
+            .read_exact(&mut new[newpos as usize..(newpos + ctrl[1]) as usize])
             .map_err(Error::DecodeError)?;
 
         // Adjust pointers
@@ -188,7 +222,7 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
         oldpos += ctrl[2];
     }
 
-    Ok(new_)
+    Ok(new)
 }
 
 fn offtin(buf: &[u8]) -> i64 {

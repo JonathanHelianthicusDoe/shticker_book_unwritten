@@ -2,6 +2,7 @@ use crate::{config::Config, error::Error, login, update};
 use reqwest;
 use std::{
     io::{self, prelude::*},
+    path::Path,
     process,
     time,
 };
@@ -30,8 +31,9 @@ const ABOUT_TEXT: &str = concat!(
     ">\n",
 );
 
-pub fn enter_command_mode(
+pub fn enter_command_mode<P: AsRef<Path>>(
     config: &mut Config,
+    config_path: P,
     client: &reqwest::Client,
 ) -> Result<(), Error> {
     println!(concat!(
@@ -127,7 +129,9 @@ pub fn enter_command_mode(
                 }
             },
             Some("login") | Some("play") | Some("launch") => {
-                if let Some(c) = login::login(config, client, argv)? {
+                if let Some(c) =
+                    login::login(config, &config_path, client, argv)?
+                {
                     children.push(c);
 
                     println!("Game launched successfully!");
@@ -142,7 +146,10 @@ pub fn enter_command_mode(
                 check_children(&mut children)?;
                 kill_instance(&mut children, argv.next())?;
             },
-            Some("accounts") | Some("logins") => unimplemented!(),
+            Some("accounts") | Some("logins") => {
+                check_children(&mut children)?;
+                display_accounts(config, &children)?;
+            },
             _ => println!(
                 "Unrecognized command. Type help or ? to get a list of \
                  commands.",
@@ -305,6 +312,39 @@ fn kill_instance(
         children.remove(i);
     } else {
         println!("No currently running instances have that username or pid.");
+    }
+
+    Ok(())
+}
+
+fn display_accounts(
+    config: &Config,
+    children: &[(String, process::Child, time::Instant)],
+) -> Result<(), Error> {
+    let max_name_len = if let Some(l) =
+        config.accounts.iter().map(|(un, _)| un.len()).max()
+    {
+        l
+    } else {
+        return Ok(());
+    };
+
+    for (username, saved_password) in
+        config.accounts.iter().map(|(un, p)| (un, p.is_string()))
+    {
+        print!(
+            "{} {}   ",
+            if children.iter().any(|(un, _, _)| un == username) {
+                '*'
+            } else {
+                ' '
+            },
+            username,
+        );
+        for _ in 0..max_name_len - username.len() {
+            print!(" ");
+        }
+        println!("Password?: {}", if saved_password { "yes" } else { "no" });
     }
 
     Ok(())

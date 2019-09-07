@@ -1,4 +1,7 @@
-use crate::{config::Config, error::Error};
+use crate::{
+    config::{commit_config, Config},
+    error::Error,
+};
 use reqwest::{self, header};
 use rpassword;
 use serde::Serialize;
@@ -6,6 +9,7 @@ use std::{
     collections::BTreeMap,
     ffi::OsStr,
     io::{self, Write},
+    path::Path,
     process,
     thread,
     time::{Duration, Instant},
@@ -14,8 +18,9 @@ use std::{
 const LOGIN_API_URI: &str =
     "https://www.toontownrewritten.com/api/login?format=json";
 
-pub fn login<'a, A: Iterator<Item = &'a str>>(
+pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
     config: &mut Config,
+    config_path: P,
     client: &reqwest::Client,
     argv: A,
 ) -> Result<Option<(String, process::Child, Instant)>, Error> {
@@ -102,7 +107,10 @@ pub fn login<'a, A: Iterator<Item = &'a str>>(
             } else {
                 password_buf
             };
-            if config.add_account(username.clone(), password).is_none() {
+
+            let old_acc = config.add_account(username.clone(), password);
+            commit_config(config, config_path)?;
+            if old_acc.is_none() {
                 println!("New account saved in config!");
             }
         }

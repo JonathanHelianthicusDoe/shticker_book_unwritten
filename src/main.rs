@@ -122,7 +122,7 @@ fn run() -> Result<(), Error> {
         println!();
     }
 
-    command::enter_command_mode(&mut config, &client)?;
+    command::enter_command_mode(&mut config, &config_path, &client)?;
 
     if !arg_matches.is_present("no-config") {
         config::commit_config(&config, &config_path)?;
