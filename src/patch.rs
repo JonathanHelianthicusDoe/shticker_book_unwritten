@@ -164,15 +164,13 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
             _ => Error::UnknownIoError(ioe),
         })?;
     let oldsize = fd.seek(SeekFrom::End(0)).map_err(Error::SeekError)? as i64;
-    let mut old = Vec::with_capacity(oldsize as usize + 1);
-    old.resize_with(oldsize as usize + 1, Default::default);
+    let mut old = Vec::with_capacity(oldsize as usize);
+    old.resize_with(oldsize as usize, Default::default);
     fd.seek(SeekFrom::Start(0)).map_err(Error::SeekError)?;
-    let old_len = old.len();
-    fd.read_exact(&mut old[..old_len - 1])
-        .map_err(Error::FileReadError)?;
+    fd.read_exact(&mut old[..]).map_err(Error::FileReadError)?;
 
-    let mut new = Vec::with_capacity(newsize as usize + 1);
-    new.resize_with(newsize as usize + 1, Default::default);
+    let mut new = Vec::with_capacity(newsize as usize);
+    new.resize_with(newsize as usize, Default::default);
 
     // Start the actual patching
     let mut buf = [0u8; 8];

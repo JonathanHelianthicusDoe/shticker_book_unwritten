@@ -1,5 +1,11 @@
 # shticker_book_unwritten
 
+[![crates.io](https://img.shields.io/crates/v/shticker_book_unwritten)](https://crates.io/crates/shticker_book_unwritten)
+[![AGPL v3+](https://img.shields.io/badge/license-GNU%20AGPL%20v3.0%2B-663366)](./LICENSE)
+[![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/JonathanHelianthicusDoe/shticker_book_unwritten)](https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten)
+
+![shticker_book_unwritten logo](./img/shticker_book_unwritten_256x256.png)
+
 A minimal [CLI](https://en.wikipedia.org/wiki/Command-line_interface) launcher
 for the [Toontown Rewritten](https://www.toontownrewritten.com/)
 [MMORPG](https://en.wikipedia.org/wiki/Massively_multiplayer_online_role-playing_game).
@@ -32,7 +38,7 @@ The executable name is quite lengthy, so you will probably want to alias it (to
 This entire work (including this document &amp; all associated source code) is
 licensed to anyone under the terms of the [GNU Affero General Public License,
 version 3](https://www.gnu.org/licenses/agpl-3.0.en.html) (or higher, at your
-option). For the relevant legal text, see the LICENSE file.
+option). For the relevant legal text, see the [LICENSE](./LICENSE) file.
 
 [![GNU AGPL v3+](https://www.gnu.org/graphics/agplv3-with-text-162x68.png "GNU AGPL v3+")](https://www.gnu.org/licenses/agpl-3.0.en.html)
 
@@ -40,4 +46,13 @@ This work contains ([Rust](https://www.rust-lang.org/)-ified) code from [bsdiff
 4.3](http://www.daemonology.net/bsdiff/), which is licensed under a slightly
 modified version of [the FreeBSD
 license](https://www.freebsd.org/copyright/freebsd-license.html). For the
-relevant legal text, see the LICENSE.bsdiff4 file.
+relevant legal text, see the [LICENSE.bsdiff4](./LICENSE.bsdiff4) file.
+
+The shticker_book_unwritten logo is licensed to anyone under the terms of the
+[Creative Commons Attribution-ShareAlike 4.0 International
+license](https://creativecommons.org/licenses/by-sa/4.0/). For the relevant
+legal text, see
+[https://creativecommons.org/licenses/by-sa/4.0/legalcode](https://creativecommons.org/licenses/by-sa/4.0/legalcode),
+or the [img/LICENSE.imgs](img/LICENSE.imgs) file for a plaintext version.
+
+[![CC BY-SA 4.0](https://i.creativecommons.org/l/by-sa/4.0/88x31.png "CC BY-SA 4.0")](https://creativecommons.org/licenses/by-sa/4.0/)
