@@ -7,7 +7,7 @@ description = "Minimal CLI launcher for the Toontown Rewritten MMORPG"
 repository = "https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten"
 readme = "README.md"
 keywords = ["launcher", "ttr", "toontown", "rewritten", "unwritten"]
-categories = ["Games"]
+categories = ["games"]
 license = "AGPL-3.0-or-later"
 
 [dependencies]

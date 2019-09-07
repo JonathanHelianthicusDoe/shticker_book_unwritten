@@ -22,6 +22,21 @@ issue with a description of what can be done to support the platform(s).
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
 can get from [rustup](https://rustup.rs/).
 
+### From [crates.io](https://crates.io/)
+
+```bash
+cargo install shticker_book_unwritten
+```
+
+If you already have a version installed and want the latest version to replace
+it, you can run:
+
+```bash
+cargo install -f shticker_book_unwritten
+```
+
+### From GitHub git repository
+
 ```bash
 git clone https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten.git
 cd shticker_book_unwritten
