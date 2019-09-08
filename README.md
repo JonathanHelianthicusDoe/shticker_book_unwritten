@@ -19,10 +19,16 @@ issue with a description of what can be done to support the platform(s).
 
 ## Installing
 
-Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
-can get from [rustup](https://rustup.rs/).
+### From pre-compiled binary
+
+You can get pre-compiled binaries from [the releases
+page](https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten/releases)
+on GitHub.
 
 ### From [crates.io](https://crates.io/)
+
+Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
+can get from [rustup](https://rustup.rs/).
 
 ```bash
 cargo install shticker_book_unwritten
@@ -36,6 +42,9 @@ cargo install -f shticker_book_unwritten
 ```
 
 ### From GitHub git repository
+
+Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
+can get from [rustup](https://rustup.rs/).
 
 ```bash
 git clone https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten.git
