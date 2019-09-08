@@ -31,19 +31,45 @@ const ABOUT_TEXT: &str = concat!(
     ">\n",
 );
 
-pub fn enter_command_mode<P: AsRef<Path>>(
+pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
     config: &mut Config,
     config_path: P,
     client: &reqwest::Client,
+    maybe_usernames: Option<U>,
+    detach: bool,
 ) -> Result<(), Error> {
+    let mut children = Vec::new();
+    if let Some(usernames) = maybe_usernames {
+        for username in usernames {
+            if let Some(c) = login::login(
+                config,
+                &config_path,
+                client,
+                [username].iter().copied(),
+            )? {
+                if !detach {
+                    children.push(c);
+                }
+
+                println!("Game launched successfully!");
+            }
+        }
+
+        if !detach {
+            println!();
+        }
+    };
+
+    if detach {
+        return Ok(());
+    }
+
     println!(concat!(
         "Welcome to ",
         crate_name!(),
         "! Type help or ? to get a list of commands.",
     ));
-
     let mut command_buf = String::with_capacity(0x10);
-    let mut children = Vec::with_capacity(2);
 
     'outer: loop {
         print!("> ");
@@ -56,8 +82,7 @@ pub fn enter_command_mode<P: AsRef<Path>>(
         // ^D
         if command_buf.is_empty() {
             println!();
-
-            break;
+            command_buf.push_str("quit");
         }
 
         let mut argv = command_buf
@@ -80,12 +105,12 @@ pub fn enter_command_mode<P: AsRef<Path>>(
                 } else if children.len() == 1 {
                     print!(
                         "Are you sure are you want to exit? There's still a \
-                         game instance running! [y/n]\n> ",
+                         game instance running. [y/n]\n> ",
                     );
                 } else {
                     print!(
                         "Are you sure are you want to exit? There are still \
-                         {} game instances running! [y/n]\n> ",
+                         {} game instances running. [y/n]\n> ",
                         children.len(),
                     );
                 }
@@ -150,10 +175,13 @@ pub fn enter_command_mode<P: AsRef<Path>>(
                 check_children(&mut children)?;
                 display_accounts(config, &children)?;
             },
-            _ => println!(
-                "Unrecognized command. Type help or ? to get a list of \
-                 commands.",
-            ),
+            _ => {
+                check_children(&mut children)?;
+                println!(
+                    "Unrecognized command. Type help or ? to get a list of \
+                     commands.",
+                );
+            },
         }
     }
 
@@ -234,12 +262,12 @@ fn display_instances(instances: &[(String, process::Child, time::Instant)]) {
         let pid = child.id();
 
         print!("{} ", name);
-        for _ in 0..max_name_len.saturating_sub(name.len()) {
+        for _ in 0..max_name_len - name.len() {
             print!(" ");
         }
 
         print!("| {} ", pid);
-        for _ in 0..max_pid_len.saturating_sub(count_decimal_digits(pid)) {
+        for _ in 0..max_pid_len - count_decimal_digits(pid) {
             print!(" ");
         }
 

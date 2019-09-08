@@ -53,9 +53,10 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
         }) {
             (username, password.as_str())
         } else {
-            password_buf =
-                rpassword::read_password_from_tty(Some("Password: "))
-                    .map_err(Error::PasswordReadError)?;
+            print!("Password for {}: ", username);
+            io::stdout().flush().map_err(Error::StdoutError)?;
+            password_buf = rpassword::read_password_from_tty(None)
+                .map_err(Error::PasswordReadError)?;
 
             (username, password_buf.as_str())
         }
@@ -80,9 +81,10 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
             }) {
             password.as_str()
         } else {
-            password_buf =
-                rpassword::read_password_from_tty(Some("Password: "))
-                    .map_err(Error::PasswordReadError)?;
+            print!("Password for {}: ", username_buf);
+            io::stdout().flush().map_err(Error::StdoutError)?;
+            password_buf = rpassword::read_password_from_tty(None)
+                .map_err(Error::PasswordReadError)?;
 
             password_buf.as_str()
         };

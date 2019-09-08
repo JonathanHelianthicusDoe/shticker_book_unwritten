@@ -47,7 +47,7 @@ impl fmt::Display for Error {
         match self {
             Self::NoPossibleConfigPath => f.write_str(
                 "No config path was given, and the $XDG_CONFIG_HOME and \
-                 $HOME environment variables are both empty",
+                 $HOME environment variables are both unset or empty",
             ),
             Self::BadConfigPath(bcp) =>
                 write!(f, "Bad config file path specified: {}", bcp.display()),

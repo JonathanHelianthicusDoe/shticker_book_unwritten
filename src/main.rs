@@ -103,13 +103,48 @@ fn run() -> Result<(), Error> {
                 )
                 .takes_value(false),
         )
+        .arg(
+            Arg::with_name("username")
+                .short("u")
+                .long("username")
+                .help("Username(s) to immediately login with")
+                .long_help(
+                    "If this option is supplied, then after (possibly) \
+                     auto-updating, the game will be launched with these \
+                     username(s). The password(s) will be prompted for as \
+                     normal if they aren't saved. Then, if the login(s) \
+                     succeed, command mode is entered (assuming -d is not \
+                     supplied).",
+                )
+                .takes_value(true)
+                .multiple(true),
+        )
+        .arg(
+            Arg::with_name("detach")
+                .short("d")
+                .long("detach")
+                .help(
+                    "Exit after auto-updating (and possibly launching, if -u \
+                     is supplied)",
+                )
+                .long_help(
+                    "After auto-updating (unless -n was supplied), and after \
+                     launching the game (if -u was supplied), \
+                     shticker_book_unwritten will simply exit. If the game \
+                     was launched, then its process is thus orphaned. On \
+                     POSIX, an orphan continues running normally and is \
+                     reparented to the init process (actually, on Linux, the \
+                     closest parent process marked as a subreaper).",
+                )
+                .takes_value(false),
+        )
         .get_matches();
 
     let (mut config, config_path) = config::get_config(
         arg_matches.is_present("no-config"),
-        arg_matches.value_of("CONFIG_FILE"),
-        arg_matches.value_of("INSTALL_DIR"),
-        arg_matches.value_of("CACHE_DIR"),
+        arg_matches.value_of("config"),
+        arg_matches.value_of("install-dir"),
+        arg_matches.value_of("cache-dir"),
     )?;
 
     let client = ClientBuilder::new()
@@ -122,11 +157,11 @@ fn run() -> Result<(), Error> {
         println!();
     }
 
-    command::enter_command_mode(&mut config, &config_path, &client)?;
-
-    if !arg_matches.is_present("no-config") {
-        config::commit_config(&config, &config_path)?;
-    }
-
-    Ok(())
+    command::enter_command_mode(
+        &mut config,
+        &config_path,
+        &client,
+        arg_matches.values_of("username"),
+        arg_matches.is_present("detach"),
+    )
 }
