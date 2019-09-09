@@ -35,6 +35,7 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
     config: &mut Config,
     config_path: P,
     client: &reqwest::Client,
+    quiet: bool,
     maybe_usernames: Option<U>,
     detach: bool,
 ) -> Result<(), Error> {
@@ -45,17 +46,20 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                 config,
                 &config_path,
                 client,
+                quiet,
                 [username].iter().copied(),
             )? {
                 if !detach {
                     children.push(c);
                 }
 
-                println!("Game launched successfully!");
+                if !quiet {
+                    println!("Game launched successfully!");
+                }
             }
         }
 
-        if !detach {
+        if !detach && !quiet {
             println!();
         }
     };
@@ -64,11 +68,13 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
         return Ok(());
     }
 
-    println!(concat!(
-        "Welcome to ",
-        crate_name!(),
-        "! Type help or ? to get a list of commands.",
-    ));
+    if !quiet {
+        println!(concat!(
+            "Welcome to ",
+            crate_name!(),
+            "! Type help or ? to get a list of commands.",
+        ));
+    }
     let mut command_buf = String::with_capacity(0x10);
 
     'outer: loop {
@@ -92,14 +98,14 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
             None => (),
             Some("help") | Some("?") => {
                 help();
-                check_children(&mut children)?;
+                check_children(quiet, &mut children)?;
             },
             Some("about") => {
                 about();
-                check_children(&mut children)?;
+                check_children(quiet, &mut children)?;
             },
             Some("quit") | Some("exit") => {
-                check_children(&mut children)?;
+                check_children(quiet, &mut children)?;
                 if children.is_empty() {
                     break;
                 } else if children.len() == 1 {
@@ -137,9 +143,9 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                 }
             },
             Some("update") | Some("up") => {
-                check_children(&mut children)?;
+                check_children(quiet, &mut children)?;
                 if children.is_empty() {
-                    update::update(config, client)?
+                    update::update(config, client, quiet)?
                 } else if children.len() == 1 {
                     println!(
                         "There's still a game instance running, can't update \
@@ -155,28 +161,30 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
             },
             Some("login") | Some("play") | Some("launch") => {
                 if let Some(c) =
-                    login::login(config, &config_path, client, argv)?
+                    login::login(config, &config_path, client, quiet, argv)?
                 {
                     children.push(c);
 
-                    println!("Game launched successfully!");
+                    if !quiet {
+                        println!("Game launched successfully!");
+                    }
                 }
-                check_children(&mut children)?;
+                check_children(quiet, &mut children)?;
             },
             Some("instances") | Some("running") => {
-                check_children(&mut children)?;
+                check_children(quiet, &mut children)?;
                 display_instances(&children);
             },
             Some("kill") | Some("close") => {
-                check_children(&mut children)?;
-                kill_instance(&mut children, argv.next())?;
+                check_children(quiet, &mut children)?;
+                kill_instance(quiet, &mut children, argv.next())?;
             },
             Some("accounts") | Some("logins") => {
-                check_children(&mut children)?;
+                check_children(quiet, &mut children)?;
                 display_accounts(config, &children)?;
             },
             _ => {
-                check_children(&mut children)?;
+                check_children(quiet, &mut children)?;
                 println!(
                     "Unrecognized command. Type help or ? to get a list of \
                      commands.",
@@ -280,6 +288,7 @@ fn display_instances(instances: &[(String, process::Child, time::Instant)]) {
 }
 
 fn kill_instance(
+    quiet: bool,
     children: &mut Vec<(String, process::Child, time::Instant)>,
     arg: Option<&str>,
 ) -> Result<(), Error> {
@@ -316,7 +325,9 @@ fn kill_instance(
         let pid = child.id();
         let uptime_sec = timestamp.elapsed().as_secs();
 
-        println!("Killing instance...");
+        if !quiet {
+            println!("Killing instance...");
+        }
 
         if let Err(ioe) = child.kill() {
             if ioe.kind() != io::ErrorKind::InvalidInput {
@@ -324,18 +335,25 @@ fn kill_instance(
             }
         }
 
-        println!("Joining instance's thread...");
+        if !quiet {
+            println!("Joining instance's thread...");
+        }
 
         child.wait().map_err(Error::ThreadJoinError)?;
 
-        println!("Successfully killed {}'s instance with pid {},", name, pid);
-        let secs = uptime_sec % 60;
-        let minutes = (uptime_sec / 60) % 60;
-        let hours = uptime_sec / (60 * 60);
-        println!(
-            "which had an approximate uptime of {}h {:02}m {:02}s.",
-            hours, minutes, secs,
-        );
+        if !quiet {
+            println!(
+                "Successfully killed {}'s instance with pid {},",
+                name, pid
+            );
+            let secs = uptime_sec % 60;
+            let minutes = (uptime_sec / 60) % 60;
+            let hours = uptime_sec / (60 * 60);
+            println!(
+                "which had an approximate uptime of {}h {:02}m {:02}s.",
+                hours, minutes, secs,
+            );
+        }
 
         children.remove(i);
     } else {
@@ -381,6 +399,7 @@ fn display_accounts(
 /// Naïve implementation because, let's be real, how many instances of the game
 /// are you really going to run concurrently?
 fn check_children(
+    quiet: bool,
     children: &mut Vec<(String, process::Child, time::Instant)>,
 ) -> Result<(), Error> {
     let mut i = 0;
@@ -388,15 +407,20 @@ fn check_children(
         if let Some(exit_status) =
             child.try_wait().map_err(Error::ThreadJoinError)?
         {
-            if exit_status.success() {
-                println!("{}'s instance exited normally.", username);
-            } else if let Some(exit_code) = exit_status.code() {
-                println!(
-                    "{}'s instance exited abnormally. Exit code: {}",
-                    username, exit_code,
-                );
-            } else {
-                println!("{}'s instance was killed by a signal.", username);
+            if !quiet {
+                if exit_status.success() {
+                    println!("{}'s instance exited normally.", username);
+                } else if let Some(exit_code) = exit_status.code() {
+                    println!(
+                        "{}'s instance exited abnormally. Exit code: {}",
+                        username, exit_code,
+                    );
+                } else {
+                    println!(
+                        "{}'s instance was killed by a signal.",
+                        username,
+                    );
+                }
             }
 
             children.remove(i);

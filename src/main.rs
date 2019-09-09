@@ -40,7 +40,7 @@ fn run() -> Result<(), Error> {
                 .long("config")
                 .aliases(&["conf", "configuration"])
                 .value_name("CONFIG_FILE")
-                .help("Configuration JSON file to use")
+                .help("Configuration JSON file to use.")
                 .long_help(concat!(
                     "Configuration JSON file to use. Defaults to \
                      \"$XDG_CONFIG_HOME\"/",
@@ -56,7 +56,7 @@ fn run() -> Result<(), Error> {
             Arg::with_name("no-config")
                 .long("no-config")
                 .aliases(&["no-conf", "no-configuration"])
-                .help("Don't read or write any config files")
+                .help("Don't read or write any config files.")
                 .takes_value(false)
                 .requires_all(&["install-dir", "cache-dir"])
                 .conflicts_with("config"),
@@ -66,7 +66,7 @@ fn run() -> Result<(), Error> {
                 .short("i")
                 .long("install-dir")
                 .value_name("INSTALL_DIR")
-                .help("Directory of TTR installation")
+                .help("Directory of TTR installation.")
                 .long_help(
                     "The directory of the TTR installation, which will be \
                      automatically created if it doesn't already exist. \
@@ -81,7 +81,7 @@ fn run() -> Result<(), Error> {
                 .short("a")
                 .long("cache-dir")
                 .value_name("CACHE_DIR")
-                .help("Directory for caching game file downloads")
+                .help("Directory for caching game file downloads.")
                 .long_help(
                     "Directory for caching game file downloads, which will \
                      be created if it doesn't already exist. Overrides the \
@@ -96,7 +96,7 @@ fn run() -> Result<(), Error> {
             Arg::with_name("no-auto-update")
                 .short("n")
                 .long("no-auto-update")
-                .help("Suppress auto-update behavior")
+                .help("Suppress auto-update behavior.")
                 .long_help(
                     "Suppresses auto-updating, although you can still decide \
                      to update via the \"update\"/\"up\" command.",
@@ -107,7 +107,7 @@ fn run() -> Result<(), Error> {
             Arg::with_name("username")
                 .short("u")
                 .long("username")
-                .help("Username(s) to immediately login with")
+                .help("Username(s) to immediately login with.")
                 .long_help(
                     "If this option is supplied, then after (possibly) \
                      auto-updating, the game will be launched with these \
@@ -125,7 +125,7 @@ fn run() -> Result<(), Error> {
                 .long("detach")
                 .help(
                     "Exit after auto-updating (and possibly launching, if -u \
-                     is supplied)",
+                     is supplied).",
                 )
                 .long_help(
                     "After auto-updating (unless -n was supplied), and after \
@@ -138,13 +138,26 @@ fn run() -> Result<(), Error> {
                 )
                 .takes_value(false),
         )
+        .arg(
+            Arg::with_name("quiet")
+                .short("q")
+                .long("quiet")
+                .help(
+                    "Don't output anything unless necessary or explicitly \
+                     requested.",
+                )
+                .takes_value(false),
+        )
         .get_matches();
+
+    let quiet = arg_matches.is_present("quiet");
 
     let (mut config, config_path) = config::get_config(
         arg_matches.is_present("no-config"),
         arg_matches.value_of("config"),
         arg_matches.value_of("install-dir"),
         arg_matches.value_of("cache-dir"),
+        quiet,
     )?;
 
     let client = ClientBuilder::new()
@@ -152,15 +165,18 @@ fn run() -> Result<(), Error> {
         .map_err(Error::HttpClientCreateError)?;
 
     if !arg_matches.is_present("no-auto-update") {
-        update::update(&config, &client)?;
+        update::update(&config, &client, quiet)?;
 
-        println!();
+        if !quiet {
+            println!();
+        }
     }
 
     command::enter_command_mode(
         &mut config,
         &config_path,
         &client,
+        quiet,
         arg_matches.values_of("username"),
         arg_matches.is_present("detach"),
     )

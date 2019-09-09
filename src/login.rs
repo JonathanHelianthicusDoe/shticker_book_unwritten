@@ -22,6 +22,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
     config: &mut Config,
     config_path: P,
     client: &reqwest::Client,
+    quiet: bool,
     argv: A,
 ) -> Result<Option<(String, process::Child, Instant)>, Error> {
     let (mut maybe_username, mut nosave) = (None, false);
@@ -44,7 +45,9 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
     let (username, password) = if let Some(username) = maybe_username {
         if let Some(password) = config.accounts.get(username).and_then(|val| {
             if let serde_json::Value::String(p) = val {
-                println!("Using saved password...");
+                if !quiet {
+                    println!("Using saved password...");
+                }
 
                 Some(p)
             } else {
@@ -72,7 +75,9 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
         let password = if let Some(password) =
             config.accounts.get(&username_buf).and_then(|val| {
                 if let serde_json::Value::String(p) = val {
-                    println!("Using saved password...");
+                    if !quiet {
+                        println!("Using saved password...");
+                    }
 
                     Some(p)
                 } else {
@@ -95,9 +100,11 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
     let mut params = BTreeMap::new();
     params.insert("username", username);
     params.insert("password", password);
-    if let Some(response_json) =
-        handle_login_negotiation(client, post_to_login_api(client, &params)?)?
-    {
+    if let Some(response_json) = handle_login_negotiation(
+        client,
+        quiet,
+        post_to_login_api(client, &params)?,
+    )? {
         let username = if username_buf.is_empty() {
             username.to_owned()
         } else {
@@ -112,7 +119,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
 
             let old_acc = config.add_account(username.clone(), password);
             commit_config(config, config_path)?;
-            if old_acc.is_none() {
+            if !quiet && old_acc.is_none() {
                 println!("New account saved in config!");
             }
         }
@@ -142,7 +149,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
                 "Expected \"gameserver\" key with String value",
             ))?;
 
-        launch(config, play_cookie, game_server)
+        launch(config, quiet, play_cookie, game_server)
             .map(|c| Some((username, c, Instant::now())))
     } else {
         Ok(None)
@@ -151,6 +158,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
 
 fn handle_login_negotiation(
     client: &reqwest::Client,
+    quiet: bool,
     mut response_json: serde_json::Value,
 ) -> Result<Option<serde_json::Value>, Error> {
     loop {
@@ -172,11 +180,14 @@ fn handle_login_negotiation(
 
         match success {
             "true" => {
-                println!("Authentication success!");
+                if !quiet {
+                    println!("Authentication success!");
+                }
 
                 return Ok(Some(response_json));
             },
-            "delayed" => response_json = enqueue(client, &response_json)?,
+            "delayed" =>
+                response_json = enqueue(client, quiet, &response_json)?,
             "partial" =>
                 response_json =
                     if let Some(rj) = do_2fa(client, &response_json)? {
@@ -260,6 +271,7 @@ fn do_2fa(
 
 fn enqueue(
     client: &reqwest::Client,
+    quiet: bool,
     response_json: &serde_json::Value,
 ) -> Result<serde_json::Value, Error> {
     let eta = response_json
@@ -272,21 +284,23 @@ fn enqueue(
         .ok_or(Error::BadLoginResponse(
             "Expected \"eta\" key with a String or Number value",
         ))?;
-    println!(
-        "Waiting in queue... ETA: {}, position in line: {}",
-        eta,
-        response_json
-            .get("position")
-            .and_then(|val| match val {
-                serde_json::Value::String(s) => s.parse().ok(),
-                serde_json::Value::Number(n) => n.as_u64(),
-                _ => None,
-            })
-            .ok_or(Error::BadLoginResponse(
-                "Expected \"position\" key with a String or unsigned Number \
-                 value",
-            ))?,
-    );
+    if !quiet {
+        println!(
+            "Waiting in queue... ETA: {}, position in line: {}",
+            eta,
+            response_json
+                .get("position")
+                .and_then(|val| match val {
+                    serde_json::Value::String(s) => s.parse().ok(),
+                    serde_json::Value::Number(n) => n.as_u64(),
+                    _ => None,
+                })
+                .ok_or(Error::BadLoginResponse(
+                    "Expected \"position\" key with a String or unsigned \
+                     Number value",
+                ))?,
+        );
+    }
 
     let queue_token = response_json
         .get("queueToken")
@@ -330,10 +344,13 @@ fn post_to_login_api<K: Ord + Serialize, V: Serialize>(
 
 fn launch<S: AsRef<OsStr>, T: AsRef<OsStr>>(
     config: &Config,
+    quiet: bool,
     play_cookie: S,
     game_server: T,
 ) -> Result<process::Child, Error> {
-    println!("Launching the game...");
+    if !quiet {
+        println!("Launching the game...");
+    }
 
     process::Command::new("./TTREngine")
         .current_dir(&config.install_dir)

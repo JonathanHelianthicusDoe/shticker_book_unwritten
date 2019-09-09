@@ -13,7 +13,11 @@ use std::{
 pub const BUFFER_SIZE: usize = 0x20_00;
 pub const DEFAULT_ARCH: &str = "linux2";
 
-pub fn update(config: &Config, client: &reqwest::Client) -> Result<(), Error> {
+pub fn update(
+    config: &Config,
+    client: &reqwest::Client,
+    quiet: bool,
+) -> Result<(), Error> {
     ensure_dir(&config.install_dir)?;
     ensure_dir(&config.cache_dir)?;
 
@@ -27,12 +31,14 @@ pub fn update(config: &Config, client: &reqwest::Client) -> Result<(), Error> {
 
     let mut install_dir = config.install_dir.clone();
     for (i, (file_name, file_obj)) in manifest_map.iter().enumerate() {
-        println!(
-            "[{:2}/{}] Checking for updates for {}",
-            i + 1,
-            manifest_map.len(),
-            file_name,
-        );
+        if !quiet {
+            println!(
+                "[{:2}/{}] Checking for updates for {}",
+                i + 1,
+                manifest_map.len(),
+                file_name,
+            );
+        }
 
         let file_map = if let serde_json::Value::Object(m) = file_obj {
             m
@@ -69,14 +75,19 @@ pub fn update(config: &Config, client: &reqwest::Client) -> Result<(), Error> {
         }
 
         if !supported_by_this_arch {
-            println!(
-                "        Not supported by this OS & architecture, skipping..."
-            );
+            if !quiet {
+                println!(
+                    "        Not supported by this OS & architecture, \
+                     skipping..."
+                );
+            }
 
             continue;
         }
 
-        println!("        Checking to see if file already exists...");
+        if !quiet {
+            println!("        Checking to see if file already exists...");
+        }
 
         install_dir.push(file_name);
 
@@ -84,10 +95,12 @@ pub fn update(config: &Config, client: &reqwest::Client) -> Result<(), Error> {
             Ok(f) => Some(f),
             Err(ioe) => match ioe.kind() {
                 io::ErrorKind::NotFound => {
-                    println!(
-                        "        File doesn't exist, downloading from \
-                         scratch..."
-                    );
+                    if !quiet {
+                        println!(
+                            "        File doesn't exist, downloading from \
+                             scratch..."
+                        );
+                    }
 
                     let mut file_buf = [0u8; BUFFER_SIZE];
                     let compressed_file_name = file_map
@@ -138,6 +151,7 @@ pub fn update(config: &Config, client: &reqwest::Client) -> Result<(), Error> {
                         &mut file_buf,
                         config,
                         client,
+                        quiet,
                         compressed_file_name,
                         file_name,
                         &compressed_sha,
@@ -156,6 +170,7 @@ pub fn update(config: &Config, client: &reqwest::Client) -> Result<(), Error> {
             update_existing_file(
                 config,
                 client,
+                quiet,
                 f,
                 file_map,
                 file_name,
@@ -168,7 +183,9 @@ pub fn update(config: &Config, client: &reqwest::Client) -> Result<(), Error> {
 
     #[cfg(unix)]
     {
-        println!("Making sure TTREngine is executable...");
+        if !quiet {
+            println!("Making sure TTREngine is executable...");
+        }
 
         install_dir.push("TTREngine");
         let mut ttrengine_perms = fs::metadata(&install_dir)
@@ -181,14 +198,20 @@ pub fn update(config: &Config, client: &reqwest::Client) -> Result<(), Error> {
             .permissions();
         let ttrengine_mode = ttrengine_perms.mode();
         if (ttrengine_mode & 0o100) == 0 {
-            println!("TTREngine isn't executable, setting executable bit...");
+            if !quiet {
+                println!(
+                    "TTREngine isn't executable, setting executable bit..."
+                );
+            }
 
             ttrengine_perms.set_mode(ttrengine_mode | 0o700);
             fs::set_permissions(&install_dir, ttrengine_perms)
                 .map_err(Error::PermissionsSetError)?;
 
-            println!("TTREngine is now executable!");
-        } else {
+            if !quiet {
+                println!("TTREngine is now executable!");
+            }
+        } else if !quiet {
             println!("TTREngine is already executable!");
         }
     }
@@ -199,12 +222,15 @@ pub fn update(config: &Config, client: &reqwest::Client) -> Result<(), Error> {
 fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
     config: &Config,
     client: &reqwest::Client,
+    quiet: bool,
     mut already_existing_file: File,
     file_map: &serde_json::Map<String, serde_json::Value>,
     file_name: S,
     full_file_path: P,
 ) -> Result<(), Error> {
-    println!("        File exists, checking SHA1 hash...");
+    if !quiet {
+        println!("        File exists, checking SHA1 hash...");
+    }
 
     let mut file_buf = [0u8; BUFFER_SIZE];
     let initial_sha =
@@ -223,20 +249,24 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
     })?;
 
     if initial_sha == manifest_sha {
-        println!("        SHA1 hash matches!");
+        if !quiet {
+            println!("        SHA1 hash matches!");
+        }
 
         return Ok(());
     }
 
-    print!("        SHA1 hash mismatch:\n          Local:    ");
-    for b in initial_sha.iter() {
-        print!("{:02x}", b);
+    if !quiet {
+        print!("        SHA1 hash mismatch:\n          Local:    ");
+        for b in initial_sha.iter() {
+            print!("{:02x}", b);
+        }
+        print!("\n          Manifest: ");
+        for b in manifest_sha.iter() {
+            print!("{:02x}", b);
+        }
+        println!("\n        Checking for a patch...");
     }
-    print!("\n          Manifest: ");
-    for b in manifest_sha.iter() {
-        print!("{:02x}", b);
-    }
-    println!("\n        Checking for a patch...");
 
     let patches_map = file_map
         .get("patches")
@@ -278,7 +308,9 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
                 )
             })?;
 
-        println!("        Found a patch! Downloading it...");
+        if !quiet {
+            println!("        Found a patch! Downloading it...");
+        }
 
         let mut extracted_patch_file_name =
             String::with_capacity(patch_file_name.len() + ".extracted".len());
@@ -289,6 +321,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
             &mut file_buf,
             config,
             client,
+            quiet,
             patch_file_name,
             &extracted_patch_file_name,
             &patch_map
@@ -320,11 +353,15 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
             5,
         )?;
 
-        println!("        Applying patch...");
+        if !quiet {
+            println!("        Applying patch...");
+        }
 
         patch::patch_file(&extracted_patch_file_name, full_file_path)?;
 
-        println!("        File patched successfully!");
+        if !quiet {
+            println!("        File patched successfully!");
+        }
 
         did_patch = true;
 
@@ -332,7 +369,9 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
     }
 
     if !did_patch {
-        println!("        No patches found, downloading from scratch...");
+        if !quiet {
+            println!("        No patches found, downloading from scratch...");
+        }
 
         let compressed_file_name = file_map
             .get("dl")
@@ -362,6 +401,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
             &mut file_buf,
             config,
             client,
+            quiet,
             compressed_file_name,
             file_name,
             &compressed_sha,
@@ -456,6 +496,7 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
     buf: &mut [u8],
     config: &Config,
     client: &reqwest::Client,
+    quiet: bool,
     compressed_file_name: S,
     decompressed_file_name: T,
     compressed_sha: &[u8; 20],
@@ -490,12 +531,14 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
     };
 
     for i in 1..=max_tries {
-        println!(
-            "        Downloading {} [attempt {}/{}]",
-            compressed_file_name.as_ref(),
-            i,
-            max_tries,
-        );
+        if !quiet {
+            println!(
+                "        Downloading {} [attempt {}/{}]",
+                compressed_file_name.as_ref(),
+                i,
+                max_tries,
+            );
+        }
 
         let mut dl_resp = client
             .get(&dl_uri)
@@ -518,53 +561,67 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
                 .map_err(Error::CopyIntoFileError)?;
         }
 
-        println!(
-            "        Checking SHA1 hash of {}",
-            compressed_file_name.as_ref(),
-        );
+        if !quiet {
+            println!(
+                "        Checking SHA1 hash of {}",
+                compressed_file_name.as_ref(),
+            );
+        }
 
         let dled_sha = sha_of_file_by_path(&compressed_file_path, buf)?;
         if &dled_sha != compressed_sha {
-            print!("        SHA1 hash mismatch:\n          Local:    ");
-            for b in dled_sha.iter() {
-                print!("{:02x}", b);
+            if !quiet {
+                print!("        SHA1 hash mismatch:\n          Local:    ");
+                for b in dled_sha.iter() {
+                    print!("{:02x}", b);
+                }
+                print!("\n          Manifest: ");
+                for b in compressed_sha.iter() {
+                    print!("{:02x}", b);
+                }
+                println!("\n        Re-downloading...");
             }
-            print!("\n          Manifest: ");
-            for b in compressed_sha.iter() {
-                print!("{:02x}", b);
-            }
-            println!("\n        Re-downloading...");
 
             continue;
         }
 
-        println!("        SHA1 hash matches! Extracting...");
+        if !quiet {
+            println!("        SHA1 hash matches! Extracting...");
+        }
 
         decompress_file(buf, &compressed_file_path, &decompressed_file_path)?;
 
-        println!("        Checking SHA1 hash of extracted file...");
+        if !quiet {
+            println!("        Checking SHA1 hash of extracted file...");
+        }
 
         let extracted_sha = sha_of_file_by_path(&decompressed_file_path, buf)?;
         if &extracted_sha != decompressed_sha {
-            print!("        SHA1 hash mismatch:\n          Local:    ");
-            for b in extracted_sha.iter() {
-                print!("{:02x}", b);
+            if !quiet {
+                print!("        SHA1 hash mismatch:\n          Local:    ");
+                for b in extracted_sha.iter() {
+                    print!("{:02x}", b);
+                }
+                print!("\n          Manifest: ");
+                for b in decompressed_sha.iter() {
+                    print!("{:02x}", b);
+                }
+                println!("\n        Re-downloading...");
             }
-            print!("\n          Manifest: ");
-            for b in decompressed_sha.iter() {
-                print!("{:02x}", b);
-            }
-            println!("\n        Re-downloading...");
 
             continue;
         }
 
-        println!("        SHA1 hash matches!");
+        if !quiet {
+            println!("        SHA1 hash matches!");
+        }
 
         break;
     }
 
-    println!("        Deleting compressed version...");
+    if !quiet {
+        println!("        Deleting compressed version...");
+    }
 
     let mut loc = if to_cache {
         config.cache_dir.clone()
@@ -574,10 +631,12 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
     loc.push(compressed_file_name.as_ref());
     fs::remove_file(&loc).map_err(Error::RemoveFileError)?;
 
-    println!(
-        "        {} all done downloading!",
-        decompressed_file_name.as_ref(),
-    );
+    if !quiet {
+        println!(
+            "        {} all done downloading!",
+            decompressed_file_name.as_ref(),
+        );
+    }
 
     Ok(())
 }

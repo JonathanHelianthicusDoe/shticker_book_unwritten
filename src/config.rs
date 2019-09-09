@@ -44,6 +44,7 @@ pub fn get_config(
     config_path: Option<&str>,
     install_path: Option<&str>,
     cache_path: Option<&str>,
+    quiet: bool,
 ) -> Result<(Config, PathBuf), Error> {
     let inject_arg_values = |c| {
         let c = if let Some(ip) = install_path {
@@ -96,6 +97,10 @@ pub fn get_config(
             }
         };
 
+        if !quiet {
+            println!("Using {} as the config path...", config_path.display());
+        }
+
         match File::open(&config_path) {
             Ok(f) => serde_json::from_reader(f)
                 .map_err(Error::DeserializeError)
@@ -129,6 +134,10 @@ pub fn get_config(
             },
         }
     } else {
+        if !quiet {
+            println!("Not using any config file...");
+        }
+
         Ok((
             Config {
                 install_dir:     PathBuf::from(install_path.ok_or_else(
