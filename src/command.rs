@@ -1,4 +1,5 @@
 use crate::{config::Config, error::Error, login, update};
+use clap::{crate_name, crate_version};
 use reqwest;
 use std::{
     io::{self, prelude::*},
@@ -128,9 +129,9 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                     .map_err(Error::StdinError)?;
 
                 loop {
-                    match command_buf.trim_start().chars().nth(0) {
-                        Some('y') | Some('Y') => break 'outer,
-                        Some('n') | Some('N') => break,
+                    match command_buf.trim_start().as_bytes().get(0) {
+                        Some(b'y') | Some(b'Y') => break 'outer,
+                        Some(b'n') | Some(b'N') => break,
                         _ => (),
                     }
 

@@ -2,6 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/shticker_book_unwritten)](https://crates.io/crates/shticker_book_unwritten)
 [![AGPL v3+](https://img.shields.io/badge/license-GNU%20AGPL%20v3.0%2B-663366)](./LICENSE)
+[![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
 [![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/JonathanHelianthicusDoe/shticker_book_unwritten)](https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten)
 
 ![shticker_book_unwritten logo](./img/shticker_book_unwritten_256x256.png)

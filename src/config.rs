@@ -1,4 +1,5 @@
 use crate::error::Error;
+use clap::crate_name;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::{

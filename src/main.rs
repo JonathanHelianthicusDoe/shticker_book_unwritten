@@ -1,13 +1,5 @@
+#![forbid(unsafe_code)]
 #![deny(clippy::all)]
-
-#[macro_use]
-extern crate clap;
-extern crate bzip2;
-extern crate reqwest;
-extern crate rpassword;
-extern crate serde;
-extern crate serde_json;
-extern crate sha1;
 
 mod command;
 mod config;
@@ -16,7 +8,14 @@ mod login;
 mod patch;
 mod update;
 
-use clap::{App, Arg};
+use clap::{
+    crate_authors,
+    crate_description,
+    crate_name,
+    crate_version,
+    App,
+    Arg,
+};
 use error::Error;
 use reqwest::ClientBuilder;
 use std::process;
