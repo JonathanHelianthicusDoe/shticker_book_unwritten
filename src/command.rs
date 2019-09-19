@@ -96,7 +96,7 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
             .split(char::is_whitespace)
             .filter(|arg| !arg.is_empty());
         match argv.next() {
-            None => (),
+            None => check_children(quiet, &mut children)?,
             Some("help") | Some("?") => {
                 help();
                 check_children(quiet, &mut children)?;

@@ -197,7 +197,9 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
         // Add old data to diff string
         for i in 0..ctrl[0] {
             if (oldpos + i >= 0) && (oldpos + i < oldsize) {
-                new[(newpos + i) as usize] += old[(oldpos + i) as usize];
+                let new_index = (newpos + i) as usize;
+                let old_index = (oldpos + i) as usize;
+                new[new_index] = new[new_index].wrapping_add(old[old_index]);
             }
         }
 

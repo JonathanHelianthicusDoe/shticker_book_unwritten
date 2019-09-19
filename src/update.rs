@@ -7,7 +7,7 @@ use std::{
     fs::{self, File},
     io::{self, prelude::*},
     os::unix::fs::PermissionsExt,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 pub const BUFFER_SIZE: usize = 0x20_00;
@@ -316,7 +316,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
             String::with_capacity(patch_file_name.len() + ".extracted".len());
         extracted_patch_file_name += patch_file_name;
         extracted_patch_file_name += ".extracted";
-        download_file(
+        let extracted_patch_path = download_file(
             true,
             &mut file_buf,
             config,
@@ -357,7 +357,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
             println!("        Applying patch...");
         }
 
-        patch::patch_file(&extracted_patch_file_name, full_file_path)?;
+        patch::patch_file(&extracted_patch_path, full_file_path)?;
 
         if !quiet {
             println!("        File patched successfully!");
@@ -489,7 +489,8 @@ fn sha_from_hash_str<S: AsRef<str>>(hash_str: S) -> Result<[u8; 20], Error> {
 }
 
 /// Downloads to the cache if `to_cache`, otherwise downloads to the main
-/// installation directory.
+/// installation directory. Returns the full path to the downloaded file on
+/// success.
 #[allow(clippy::too_many_arguments)]
 fn download_file<S: AsRef<str>, T: AsRef<str>>(
     to_cache: bool,
@@ -502,7 +503,7 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
     compressed_sha: &[u8; 20],
     decompressed_sha: &[u8; 20],
     max_tries: usize,
-) -> Result<(), Error> {
+) -> Result<PathBuf, Error> {
     let mut dl_uri = String::with_capacity(
         config.cdn_uri.len() + compressed_file_name.as_ref().len(),
     );
@@ -623,13 +624,7 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         println!("        Deleting compressed version...");
     }
 
-    let mut loc = if to_cache {
-        config.cache_dir.clone()
-    } else {
-        config.install_dir.clone()
-    };
-    loc.push(compressed_file_name.as_ref());
-    fs::remove_file(&loc).map_err(Error::RemoveFileError)?;
+    fs::remove_file(&compressed_file_path).map_err(Error::RemoveFileError)?;
 
     if !quiet {
         println!(
@@ -638,7 +633,7 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         );
     }
 
-    Ok(())
+    Ok(decompressed_file_path)
 }
 
 fn decompress_file<P: AsRef<Path>>(
