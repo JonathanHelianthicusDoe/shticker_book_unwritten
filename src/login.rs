@@ -315,7 +315,13 @@ fn enqueue(
             "Expected \"queueToken\" key with a String value",
         ))?;
     // Be a tad less aggressive if the server is overloaded
-    let sleep_time = if eta < 5.0 { 500 } else { 1_500 };
+    let sleep_time = if eta < 0.25 {
+        25
+    } else if eta < 5.0 {
+        500
+    } else {
+        1_500
+    };
 
     thread::sleep(Duration::from_millis(sleep_time));
 
