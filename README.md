@@ -60,8 +60,8 @@ The executable name is quite lengthy, so you will probably want to alias it (to
 
 ## Panicking
 
-shticker\_book\_unwritten uses `#![forbid(unsafe_code)]`, so it should be
-impossible for actual [undefined
+shticker\_book\_unwritten uses `#![forbid(unsafe_code)]`, so it should (barring
+compiler bugs) be impossible for actual [undefined
 behavior](https://en.wikipedia.org/wiki/Undefined_behavior) to occur unless
 some dependency of shticker\_book\_unwritten is written using `unsafe` code in
 an [unsound](https://en.wikipedia.org/wiki/Soundness) way. However, although
@@ -105,4 +105,4 @@ at your option). For the relevant legal text, see
 [https://creativecommons.org/licenses/by-sa/4.0/legalcode](https://creativecommons.org/licenses/by-sa/4.0/legalcode),
 or the [img/LICENSE.imgs](img/LICENSE.imgs) file for a plaintext version.
 
-[![CC BY-SA 4.0](https://i.creativecommons.org/l/by-sa/4.0/88x31.png "CC BY-SA 4.0")](https://creativecommons.org/licenses/by-sa/4.0/)
+[![CC BY-SA 4.0+](https://i.creativecommons.org/l/by-sa/4.0/88x31.png "CC BY-SA 4.0+")](https://creativecommons.org/licenses/by-sa/4.0/)

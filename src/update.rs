@@ -11,7 +11,14 @@ use std::{
 };
 
 pub const BUFFER_SIZE: usize = 0x20_00;
-pub const DEFAULT_ARCH: &str = "linux2";
+#[cfg(target_os = "linux")]
+pub const OS_AND_ARCH: &str = "linux2";
+#[cfg(target_os = "macos")]
+pub const OS_AND_ARCH: &str = "darwin";
+#[cfg(all(windows, target_arch = "x86_64"))]
+pub const OS_AND_ARCH: &str = "win64";
+#[cfg(all(windows, target_arch = "x86"))]
+pub const OS_AND_ARCH: &str = "win32";
 
 pub fn update(
     config: &Config,
@@ -61,7 +68,7 @@ pub fn update(
         for arch_val in supported_archs {
             match arch_val {
                 serde_json::Value::String(s) =>
-                    if DEFAULT_ARCH == s {
+                    if OS_AND_ARCH == s {
                         supported_by_this_arch = true;
 
                         break;
