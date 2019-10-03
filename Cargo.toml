@@ -1,10 +1,11 @@
 [package]
 name = "shticker_book_unwritten"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Dr. Jonathan Helianthicus Doe, IV <augiii@protonmail.com>"]
 edition = "2018"
 description = "Minimal CLI launcher for the Toontown Rewritten MMORPG"
-repository = "https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten"
+repository = """
+https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten"""
 readme = "README.md"
 keywords = ["cli", "launcher", "ttr", "toontown", "rewritten"]
 categories = ["games"]
@@ -12,15 +13,19 @@ license = "AGPL-3.0-or-later"
 
 [dependencies]
 bzip2 = "0.3.3"
-clap = { version = "2.33.0", default-features = false, features = ["suggestions", "vec_map"] }
-reqwest = "0.9.20"
+reqwest = "0.9.21"
 rpassword = "4.0.1"
 serde = { version = "1.0.101", features = ["derive"] }
 serde_json = "1.0.40"
 sha-1 = "0.8.1"
 
+[dependencies.clap]
+version = "2.33.0"
+default-features = false
+features = ["suggestions", "vec_map"]
+
 [profile.release]
-opt-level = 3
+opt-level = "z"
 debug = false
 rpath = false
 lto = "fat"
