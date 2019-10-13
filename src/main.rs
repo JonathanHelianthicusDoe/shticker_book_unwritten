@@ -29,6 +29,21 @@ fn main() {
 }
 
 fn run() -> Result<(), Error> {
+    #[cfg(unix)]
+    const CONFIG_LONG_HELP: &str = concat!(
+        "Configuration JSON file to use. Defaults to \"$XDG_CONFIG_HOME\"/",
+        crate_name!(),
+        "/config.json and then to \"$HOME\"/.config/",
+        crate_name!(),
+        "/config.json",
+    );
+    #[cfg(windows)]
+    const CONFIG_LONG_HELP: &str = concat!(
+        r"Configuration JSON file to use. Defaults to %APPDATA%\",
+        crate_name!(),
+        r"\config.json",
+    );
+
     let arg_matches = App::new(crate_name!())
         .version(crate_version!())
         .author(crate_authors!())
@@ -40,14 +55,7 @@ fn run() -> Result<(), Error> {
                 .aliases(&["conf", "configuration"])
                 .value_name("CONFIG_FILE")
                 .help("Configuration JSON file to use.")
-                .long_help(concat!(
-                    "Configuration JSON file to use. Defaults to \
-                     \"$XDG_CONFIG_HOME\"/",
-                    crate_name!(),
-                    "/config.json and then to \"$HOME\"/.config/",
-                    crate_name!(),
-                    "/config.json",
-                ))
+                .long_help(CONFIG_LONG_HELP)
                 .takes_value(true)
                 .conflicts_with("no-config"),
         )

@@ -358,7 +358,20 @@ fn launch<S: AsRef<OsStr>, T: AsRef<OsStr>>(
         println!("Launching the game...");
     }
 
-    process::Command::new("./TTREngine")
+    #[cfg(unix)]
+    let command_text = "./TTREngine";
+    #[cfg(windows)]
+    let command_text = {
+        // `.current_dir(&config.install_dir)` doesn't seem to work like it
+        // does on Linux, so this is just a (naive) way of making real sure
+        // that we are pointing at the right executable.
+        let mut command_buf = config.install_dir.clone();
+        command_buf.push("TTREngine.exe");
+
+        command_buf
+    };
+
+    process::Command::new(&command_text)
         .current_dir(&config.install_dir)
         .env("TTR_PLAYCOOKIE", play_cookie)
         .env("TTR_GAMESERVER", game_server)

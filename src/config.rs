@@ -71,30 +71,56 @@ pub fn get_config(
         let config_path = if let Some(s) = config_path {
             PathBuf::from(s)
         } else {
-            let mut xdg_config_home = String::new();
-            let mut home = String::new();
+            #[cfg(unix)]
+            {
+                let mut xdg_config_home = String::new();
+                let mut home = String::new();
 
-            for (key, value) in env::vars() {
-                match key.as_str() {
-                    "XDG_CONFIG_HOME" => xdg_config_home = value,
-                    "HOME" => home = value,
-                    _ =>
-                        if !(home.is_empty() || xdg_config_home.is_empty()) {
-                            break;
-                        },
+                for (key, value) in env::vars() {
+                    match key.as_str() {
+                        "XDG_CONFIG_HOME" => xdg_config_home = value,
+                        "HOME" => home = value,
+                        _ =>
+                            if !(home.is_empty() || xdg_config_home.is_empty())
+                            {
+                                break;
+                            },
+                    }
+                }
+
+                if !xdg_config_home.is_empty() {
+                    [xdg_config_home.as_str(), crate_name!(), "config.json"]
+                        .iter()
+                        .collect()
+                } else if !home.is_empty() {
+                    [home.as_str(), ".config", crate_name!(), "config.json"]
+                        .iter()
+                        .collect()
+                } else {
+                    return Err(Error::NoPossibleConfigPath);
                 }
             }
+            #[cfg(windows)]
+            {
+                let mut appdata = String::new();
 
-            if !xdg_config_home.is_empty() {
-                [xdg_config_home.as_str(), crate_name!(), "config.json"]
-                    .iter()
-                    .collect()
-            } else if !home.is_empty() {
-                [home.as_str(), ".config", crate_name!(), "config.json"]
-                    .iter()
-                    .collect()
-            } else {
-                return Err(Error::NoPossibleConfigPath);
+                for (key, value) in env::vars() {
+                    match key.as_str() {
+                        "APPDATA" => appdata = value,
+                        _ =>
+                            if !appdata.is_empty() {
+                                break;
+                            },
+                    }
+                }
+
+                if !appdata.is_empty() {
+                    [appdata.as_str(), crate_name!(), "config.json"]
+                        .iter()
+                        .collect()
+                } else {
+                    return Err(Error::NoPossibleConfigPath);
+                }
             }
         };
 

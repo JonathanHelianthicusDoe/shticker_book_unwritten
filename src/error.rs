@@ -29,7 +29,9 @@ pub enum Error {
     FileRenameError(io::Error),
     NotDir(PathBuf),
     RemoveFileError(io::Error),
+    #[allow(dead_code)]
     MissingFile(&'static str),
+    #[allow(dead_code)]
     PermissionsSetError(io::Error),
     MissingCommandLineArg(&'static str),
     PasswordReadError(io::Error),
@@ -45,10 +47,18 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::NoPossibleConfigPath => f.write_str(
-                "No config path was given, and the $XDG_CONFIG_HOME and \
-                 $HOME environment variables are both unset or empty",
-            ),
+            Self::NoPossibleConfigPath => {
+                #[cfg(unix)]
+                const MSG: &str = "No config path was given, and the \
+                                   $XDG_CONFIG_HOME and $HOME environment \
+                                   variables are both unset or empty";
+                #[cfg(windows)]
+                const MSG: &str = "No config path was given, and the \
+                                   %APPDATA% environment variable is unset \
+                                   or empty";
+
+                f.write_str(MSG)
+            },
             Self::BadConfigPath(bcp) =>
                 write!(f, "Bad config file path specified: {}", bcp.display()),
             Self::MkdirError(ioe) =>

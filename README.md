@@ -13,10 +13,12 @@ for the [Toontown Rewritten](https://www.toontownrewritten.com/)
 Inspired by [Shticker Book
 Rewritten](https://github.com/madsciencecoder/Shticker-Book-Rewritten).
 
-Currently **only** built to support GNU/Linux, because I don&rsquo;t know much
-about Windows NT nor about macOS. If you know something about either of those
-platforms and want to help out, feel very free to submit a PR or to file an
-issue with a description of what can be done to support the platform(s).
+Currently **only** built to support GNU/Linux and Windows NT (using the MSVC
+toolchain), because I don&rsquo;t know much about ~~Windows NT nor about~~
+macOS. If you know something about macOS and want to help out, feel very free
+to submit a PR or to file an issue with a description of what can be done to
+support the platform. Mostly I just don&rsquo;t have a macOS machine that I
+can test on.
 
 ## Installing
 

@@ -6,7 +6,6 @@ use sha1::{Digest, Sha1};
 use std::{
     fs::{self, File},
     io::{self, prelude::*},
-    os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
 };
 
@@ -190,6 +189,8 @@ pub fn update(
 
     #[cfg(unix)]
     {
+        use std::os::unix::fs::PermissionsExt;
+
         if !quiet {
             println!("Making sure TTREngine is executable...");
         }
