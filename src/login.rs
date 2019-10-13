@@ -2,7 +2,7 @@ use crate::{
     config::{commit_config, Config},
     error::Error,
 };
-use reqwest::{self, header};
+use reqwest::{blocking as rb, header};
 use rpassword;
 use serde::Serialize;
 use std::{
@@ -21,7 +21,7 @@ const LOGIN_API_URI: &str =
 pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
     config: &mut Config,
     config_path: P,
-    client: &reqwest::Client,
+    client: &rb::Client,
     quiet: bool,
     argv: A,
 ) -> Result<Option<(String, process::Child, Instant)>, Error> {
@@ -157,7 +157,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
 }
 
 fn handle_login_negotiation(
-    client: &reqwest::Client,
+    client: &rb::Client,
     quiet: bool,
     mut response_json: serde_json::Value,
 ) -> Result<Option<serde_json::Value>, Error> {
@@ -222,7 +222,7 @@ fn handle_login_negotiation(
 
 /// Return value is `Ok(None)` if cancelled by user.
 fn do_2fa(
-    client: &reqwest::Client,
+    client: &rb::Client,
     response_json: &serde_json::Value,
 ) -> Result<Option<serde_json::Value>, Error> {
     let auth_token = response_json
@@ -270,7 +270,7 @@ fn do_2fa(
 }
 
 fn enqueue(
-    client: &reqwest::Client,
+    client: &rb::Client,
     quiet: bool,
     response_json: &serde_json::Value,
 ) -> Result<serde_json::Value, Error> {
@@ -332,7 +332,7 @@ fn enqueue(
 }
 
 fn post_to_login_api<K: Ord + Serialize, V: Serialize>(
-    client: &reqwest::Client,
+    client: &rb::Client,
     params: &BTreeMap<K, V>,
 ) -> Result<serde_json::Value, Error> {
     serde_json::from_str(

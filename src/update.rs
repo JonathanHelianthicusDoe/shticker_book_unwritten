@@ -1,6 +1,6 @@
 use crate::{config::Config, error::Error, patch};
 use bzip2::write::BzDecoder as BzWriteDecoder;
-use reqwest;
+use reqwest::blocking as rb;
 use serde_json;
 use sha1::{Digest, Sha1};
 use std::{
@@ -22,7 +22,7 @@ pub const OS_AND_ARCH: &str = "win32";
 
 pub fn update(
     config: &Config,
-    client: &reqwest::Client,
+    client: &rb::Client,
     quiet: bool,
 ) -> Result<(), Error> {
     ensure_dir(&config.install_dir)?;
@@ -228,7 +228,7 @@ pub fn update(
 
 fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
     config: &Config,
-    client: &reqwest::Client,
+    client: &rb::Client,
     quiet: bool,
     mut already_existing_file: File,
     file_map: &serde_json::Map<String, serde_json::Value>,
@@ -422,9 +422,9 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
 
 fn get_manifest(
     config: &Config,
-    client: &reqwest::Client,
+    client: &rb::Client,
 ) -> Result<serde_json::Value, Error> {
-    let mut manifest_resp = client
+    let manifest_resp = client
         .get(&config.manifest_uri)
         .send()
         .map_err(Error::ManifestRequestError)?;
@@ -503,7 +503,7 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
     to_cache: bool,
     buf: &mut [u8],
     config: &Config,
-    client: &reqwest::Client,
+    client: &rb::Client,
     quiet: bool,
     compressed_file_name: S,
     decompressed_file_name: T,

@@ -17,7 +17,7 @@ use clap::{
     Arg,
 };
 use error::Error;
-use reqwest::ClientBuilder;
+use reqwest::blocking as rb;
 use std::process;
 
 fn main() {
@@ -159,7 +159,7 @@ fn run() -> Result<(), Error> {
         quiet,
     )?;
 
-    let client = ClientBuilder::new()
+    let client = rb::ClientBuilder::new()
         .build()
         .map_err(Error::HttpClientCreateError)?;
 

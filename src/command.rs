@@ -1,6 +1,6 @@
 use crate::{config::Config, error::Error, login, update};
 use clap::{crate_name, crate_version};
-use reqwest;
+use reqwest::blocking as rb;
 use std::{
     io::{self, prelude::*},
     path::Path,
@@ -35,7 +35,7 @@ const ABOUT_TEXT: &str = concat!(
 pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
     config: &mut Config,
     config_path: P,
-    client: &reqwest::Client,
+    client: &rb::Client,
     quiet: bool,
     maybe_usernames: Option<U>,
     detach: bool,
