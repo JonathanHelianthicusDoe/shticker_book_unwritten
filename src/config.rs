@@ -71,7 +71,7 @@ pub fn get_config(
         let config_path = if let Some(s) = config_path {
             PathBuf::from(s)
         } else {
-            #[cfg(unix)]
+            #[cfg(target_os = "linux")]
             {
                 let mut xdg_config_home = String::new();
                 let mut home = String::new();
@@ -116,6 +116,29 @@ pub fn get_config(
 
                 if !appdata.is_empty() {
                     [appdata.as_str(), crate_name!(), "config.json"]
+                        .iter()
+                        .collect()
+                } else {
+                    return Err(Error::NoPossibleConfigPath);
+                }
+            }
+            #[cfg(target_os = "macos")]
+            {
+                let mut home = String::new();
+
+                for (key, value) in env::vars() {
+                    match key.as_str() {
+                        "HOME" => home = value,
+                        _ =>
+                            if !(home.is_empty())
+                            {
+                                break;
+                            },
+                    }
+                }
+
+                if !home.is_empty() {
+                    [home.as_str(), "Library", "Preferences", crate_name!(), "config.json"]
                         .iter()
                         .collect()
                 } else {
