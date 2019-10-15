@@ -13,12 +13,8 @@ for the [Toontown Rewritten](https://www.toontownrewritten.com/)
 Inspired by [Shticker Book
 Rewritten](https://github.com/madsciencecoder/Shticker-Book-Rewritten).
 
-Currently **only** built to support GNU/Linux and Windows NT (using the MSVC
-toolchain), because I don&rsquo;t know much about ~~Windows NT nor about~~
-macOS. If you know something about macOS and want to help out, feel very free
-to submit a PR or to file an issue with a description of what can be done to
-support the platform. Mostly I just don&rsquo;t have a macOS machine that I
-can test on.
+Currently builds and functions on GNU/Linux, Windows NT (using the MSVC
+toolchain), and OS X (Be sure to allow terminal the ability to monitor inputs).
 
 ## Installing
 
@@ -31,7 +27,7 @@ on GitHub.
 ### From [crates.io](https://crates.io/)
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
-can get from [rustup](https://rustup.rs/).
+can get from [rustup](https://rustup.rs/). *OS X (and maybe others): If the build fails, try using the nightly branch of rust.*
 
 ```bash
 cargo install shticker_book_unwritten
@@ -47,7 +43,7 @@ cargo install -f shticker_book_unwritten
 ### From GitHub git repository
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
-can get from [rustup](https://rustup.rs/).
+can get from [rustup](https://rustup.rs/). *OS X (and maybe others): If the build fails, try using the nightly branch of rust.*
 
 ```bash
 git clone https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten.git

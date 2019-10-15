@@ -29,7 +29,7 @@ fn main() {
 }
 
 fn run() -> Result<(), Error> {
-    #[cfg(unix)]
+    #[cfg(target_os = "linux")]
     const CONFIG_LONG_HELP: &str = concat!(
         "Configuration JSON file to use. Defaults to \"$XDG_CONFIG_HOME\"/",
         crate_name!(),
@@ -42,6 +42,12 @@ fn run() -> Result<(), Error> {
         r"Configuration JSON file to use. Defaults to %APPDATA%\",
         crate_name!(),
         r"\config.json",
+    );
+    #[cfg(target_os = "macos")]
+    const CONFIG_LONG_HELP: &str = concat!(
+        r"Configuration JSON file to use. Defaults to $HOME/Library/Preferences/",
+        crate_name!(),
+        r"/config.json",
     );
 
     let arg_matches = App::new(crate_name!())

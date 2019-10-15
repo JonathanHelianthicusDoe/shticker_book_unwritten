@@ -48,13 +48,17 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::NoPossibleConfigPath => {
-                #[cfg(unix)]
+                #[cfg(target_os = "linux")]
                 const MSG: &str = "No config path was given, and the \
                                    $XDG_CONFIG_HOME and $HOME environment \
                                    variables are both unset or empty";
                 #[cfg(windows)]
                 const MSG: &str = "No config path was given, and the \
                                    %APPDATA% environment variable is unset \
+                                   or empty";
+                #[cfg(target_os = "macos")]
+                const MSG: &str = "No config path was given, and the \
+                                   $HOME environment variable is unset \
                                    or empty";
 
                 f.write_str(MSG)

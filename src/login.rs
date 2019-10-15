@@ -358,7 +358,7 @@ fn launch<S: AsRef<OsStr>, T: AsRef<OsStr>>(
         println!("Launching the game...");
     }
 
-    #[cfg(unix)]
+    #[cfg(target_os = "linux")]
     let command_text = "./TTREngine";
     #[cfg(windows)]
     let command_text = {
@@ -367,6 +367,15 @@ fn launch<S: AsRef<OsStr>, T: AsRef<OsStr>>(
         // that we are pointing at the right executable.
         let mut command_buf = config.install_dir.clone();
         command_buf.push("TTREngine.exe");
+
+        command_buf
+    };
+
+    #[cfg(target_os = "macos")]
+    let command_text = {
+        // `.current_dir` is also borked on OS X
+        let mut command_buf = config.install_dir.clone();
+        command_buf.push("Toontown Rewritten");
 
         command_buf
     };
