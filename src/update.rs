@@ -232,7 +232,7 @@ pub fn update(
 
             ttrengine_perms.set_mode(ttrengine_mode | 0o700);
             fs::set_permissions(&install_dir, ttrengine_perms)
-                .map_err(Error::PermissionsSetError)?;
+                .map_err(|ioe| Error::PermissionsSetError(install_dir, ioe))?;
 
             if !quiet {
                 println!("{} is now executable!", EXE_NAME);
@@ -658,7 +658,8 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         println!("        Deleting compressed version...");
     }
 
-    fs::remove_file(&compressed_file_path).map_err(Error::RemoveFileError)?;
+    fs::remove_file(&compressed_file_path)
+        .map_err(|ioe| Error::RemoveFileError(compressed_file_path, ioe))?;
 
     if !quiet {
         println!(

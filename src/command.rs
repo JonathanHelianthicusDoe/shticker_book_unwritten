@@ -332,7 +332,7 @@ fn kill_instance(
 
         if let Err(ioe) = child.kill() {
             if ioe.kind() != io::ErrorKind::InvalidInput {
-                return Err(Error::ProcessKillError(ioe));
+                return Err(Error::ProcessKillError(pid, ioe));
             }
         }
 

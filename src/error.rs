@@ -24,15 +24,15 @@ pub enum Error {
     DecodeError(PathBuf, io::Error),
     BadPatchVersion,
     BadPatchSize,
-    SeekError(io::Error),
+    SeekError(PathBuf, io::Error),
     PatchSanityCheckFail(u8),
-    FileRenameError(io::Error),
+    FileRenameError(PathBuf, PathBuf, io::Error),
     NotDir(PathBuf),
-    RemoveFileError(io::Error),
+    RemoveFileError(PathBuf, io::Error),
     #[allow(dead_code)]
     MissingFile(&'static str),
     #[allow(dead_code)]
-    PermissionsSetError(io::Error),
+    PermissionsSetError(PathBuf, io::Error),
     MissingCommandLineArg(&'static str),
     PasswordReadError(io::Error),
     HttpClientCreateError(reqwest::Error),
@@ -41,7 +41,7 @@ pub enum Error {
     UnexpectedSuccessValue(String),
     ThreadSpawnError(io::Error),
     ThreadJoinError(io::Error),
-    ProcessKillError(io::Error),
+    ProcessKillError(u32, io::Error),
 }
 
 impl fmt::Display for Error {
@@ -109,18 +109,28 @@ impl fmt::Display for Error {
             Self::BadPatchSize => f.write_str(
                 "Unable to determine patch's size, or patch is invalid",
             ),
-            Self::SeekError(ioe) =>
-                write!(f, "Error while seeking through file:\n\t{}", ioe),
+            Self::SeekError(path, ioe) => write!(
+                f,
+                "Error while seeking through file {:?}:\n\t{}",
+                path, ioe,
+            ),
             Self::PatchSanityCheckFail(i) =>
                 write!(f, "During patching, sanity check #{} failed", i),
-            Self::FileRenameError(ioe) =>
-                write!(f, "Error renaming file:\n\t{}", ioe),
-            Self::NotDir(p) => write!(f, "{} is not a directory", p.display()),
-            Self::RemoveFileError(ioe) =>
-                write!(f, "Error removing file:\n\t{}", ioe),
-            Self::MissingFile(n) => write!(f, "Expected {} file to exist", n),
-            Self::PermissionsSetError(ioe) =>
-                write!(f, "Failure to set permissions on file:\n\t{}", ioe),
+            Self::FileRenameError(from, to, ioe) => write!(
+                f,
+                "Error renaming file from {:?} to {:?}:\n\t{}",
+                from, to, ioe,
+            ),
+            Self::NotDir(path) => write!(f, "{:?} is not a directory", path),
+            Self::RemoveFileError(path, ioe) =>
+                write!(f, "Error removing file {:?}:\n\t{}", path, ioe),
+            Self::MissingFile(name) =>
+                write!(f, "Expected \"{}\" file to exist", name),
+            Self::PermissionsSetError(path, ioe) => write!(
+                f,
+                "Failure to set permissions on file {:?}:\n\t{}",
+                path, ioe,
+            ),
             Self::MissingCommandLineArg(a) => write!(
                 f,
                 "Expected the {} command line argument to be present",
@@ -134,14 +144,17 @@ impl fmt::Display for Error {
                 write!(f, "Error sending HTTP POST:\n\t{}", pe),
             Self::BadLoginResponse(blr) =>
                 write!(f, "Bad login response:\n\t{}", blr),
-            Self::UnexpectedSuccessValue(usv) =>
-                write!(f, "Unexpected \"success\" value: {}", usv),
+            Self::UnexpectedSuccessValue(value) =>
+                write!(f, "Unexpected \"success\" value: {}", value),
             Self::ThreadSpawnError(ioe) =>
                 write!(f, "Error spawning thread:\n\t{}", ioe),
             Self::ThreadJoinError(ioe) =>
                 write!(f, "Error attempting to join thread:\n\t{}", ioe),
-            Self::ProcessKillError(ioe) =>
-                write!(f, "Error killing child process:\n\t{}", ioe),
+            Self::ProcessKillError(pid, ioe) => write!(
+                f,
+                "Error killing child process with PID {}:\n\t{}",
+                pid, ioe,
+            ),
         }
     }
 }
@@ -171,13 +184,13 @@ impl Error {
             Self::DecodeError(_, _) => 18,
             Self::BadPatchVersion => 19,
             Self::BadPatchSize => 20,
-            Self::SeekError(_) => 21,
+            Self::SeekError(_, _) => 21,
             Self::PatchSanityCheckFail(_) => 22,
-            Self::FileRenameError(_) => 23,
+            Self::FileRenameError(_, _, _) => 23,
             Self::NotDir(_) => 24,
-            Self::RemoveFileError(_) => 25,
+            Self::RemoveFileError(_, _) => 25,
             Self::MissingFile(_) => 26,
-            Self::PermissionsSetError(_) => 27,
+            Self::PermissionsSetError(_, _) => 27,
             Self::MissingCommandLineArg(_) => 28,
             Self::PasswordReadError(_) => 29,
             Self::HttpClientCreateError(_) => 30,
@@ -186,7 +199,7 @@ impl Error {
             Self::UnexpectedSuccessValue(_) => 33,
             Self::ThreadSpawnError(_) => 34,
             Self::ThreadJoinError(_) => 35,
-            Self::ProcessKillError(_) => 36,
+            Self::ProcessKillError(_, _) => 36,
         }
     }
 }
