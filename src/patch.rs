@@ -57,11 +57,10 @@ pub fn patch_file<P: AsRef<Path>, Q: AsRef<Path>>(
 
     bsdiff_patch(patch_file_path, &target_file_path, &temp_file_path)?;
 
-    std::fs::rename(&temp_file_path, &target_file_path).map_err(|ioe| {
+    std::fs::rename(&temp_file_path, &target_file_path).map_err(|_| {
         Error::FileRenameError(
             temp_file_path.into(),
             target_file_path.as_ref().to_path_buf(),
-            ioe,
         )
     })?;
 

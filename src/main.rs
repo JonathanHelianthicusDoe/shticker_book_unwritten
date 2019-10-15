@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::all)]
+#![deny(deprecated)]
 
 mod command;
 mod config;
@@ -19,7 +20,7 @@ use clap::{
 };
 use error::Error;
 use reqwest::blocking as rb;
-use std::process;
+use std::{num::NonZeroUsize, process};
 
 fn main() {
     if let Err(e) = run() {
@@ -163,9 +164,32 @@ fn run() -> Result<(), Error> {
                 )
                 .takes_value(false),
         )
+        .arg(
+            Arg::with_name("tries")
+                .short("t")
+                .long("tries")
+                .help(
+                    "Positive integer number of times to try doing things \
+                     involving the network. Defaults to 5.",
+                )
+                .long_help(
+                    "Positive integer number of times to try doing things \
+                     that involve interacting with the network. Defaults to \
+                     5. Currently works for downloading files, including the \
+                     manifest.",
+                )
+                .takes_value(true),
+        )
         .get_matches();
 
     let quiet = arg_matches.is_present("quiet");
+    let max_tries = if let Some(tries_str) = arg_matches.value_of("tries") {
+        tries_str
+            .parse()
+            .map_err(|_| Error::InvalidArgValue("--tries/-t"))?
+    } else {
+        NonZeroUsize::new(5).unwrap()
+    };
 
     let (mut config, config_path) = config::get_config(
         arg_matches.is_present("no-config"),
@@ -180,7 +204,7 @@ fn run() -> Result<(), Error> {
         .map_err(Error::HttpClientCreateError)?;
 
     if !arg_matches.is_present("no-auto-update") {
-        update::update(&config, &client, quiet)?;
+        update::update(&config, &client, quiet, max_tries)?;
 
         if !quiet {
             println!();
@@ -194,5 +218,6 @@ fn run() -> Result<(), Error> {
         quiet,
         arg_matches.values_of("username"),
         arg_matches.is_present("detach"),
+        max_tries,
     )
 }

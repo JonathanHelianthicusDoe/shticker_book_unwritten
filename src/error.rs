@@ -26,7 +26,7 @@ pub enum Error {
     BadPatchSize,
     SeekError(PathBuf, io::Error),
     PatchSanityCheckFail(u8),
-    FileRenameError(PathBuf, PathBuf, io::Error),
+    FileRenameError(PathBuf, PathBuf),
     NotDir(PathBuf),
     RemoveFileError(PathBuf, io::Error),
     #[allow(dead_code)]
@@ -42,6 +42,8 @@ pub enum Error {
     ThreadSpawnError(io::Error),
     ThreadJoinError(io::Error),
     ProcessKillError(u32, io::Error),
+    HashMismatch(PathBuf, [u8; 20]),
+    InvalidArgValue(&'static str),
 }
 
 impl fmt::Display for Error {
@@ -116,11 +118,8 @@ impl fmt::Display for Error {
             ),
             Self::PatchSanityCheckFail(i) =>
                 write!(f, "During patching, sanity check #{} failed", i),
-            Self::FileRenameError(from, to, ioe) => write!(
-                f,
-                "Error renaming file from {:?} to {:?}:\n\t{}",
-                from, to, ioe,
-            ),
+            Self::FileRenameError(from, to) =>
+                write!(f, "Error renaming file from {:?} to {:?}", from, to),
             Self::NotDir(path) => write!(f, "{:?} is not a directory", path),
             Self::RemoveFileError(path, ioe) =>
                 write!(f, "Error removing file {:?}:\n\t{}", path, ioe),
@@ -152,9 +151,24 @@ impl fmt::Display for Error {
                 write!(f, "Error attempting to join thread:\n\t{}", ioe),
             Self::ProcessKillError(pid, ioe) => write!(
                 f,
-                "Error killing child process with PID {}:\n\t{}",
+                "Error killing child process with pid {}:\n\t{}",
                 pid, ioe,
             ),
+            Self::HashMismatch(path, expected) => {
+                write!(
+                    f,
+                    "SHA1 hash of local file {:?} did not match manifest's \
+                     hash of ",
+                    path,
+                )?;
+                for b in expected.iter() {
+                    write!(f, "{:02x}", b)?;
+                }
+
+                Ok(())
+            },
+            Self::InvalidArgValue(param) =>
+                write!(f, "Invalid value for the argument of {}", param),
         }
     }
 }
@@ -186,7 +200,7 @@ impl Error {
             Self::BadPatchSize => 20,
             Self::SeekError(_, _) => 21,
             Self::PatchSanityCheckFail(_) => 22,
-            Self::FileRenameError(_, _, _) => 23,
+            Self::FileRenameError(_, _) => 23,
             Self::NotDir(_) => 24,
             Self::RemoveFileError(_, _) => 25,
             Self::MissingFile(_) => 26,
@@ -200,6 +214,8 @@ impl Error {
             Self::ThreadSpawnError(_) => 34,
             Self::ThreadJoinError(_) => 35,
             Self::ProcessKillError(_, _) => 36,
+            Self::HashMismatch(_, _) => 37,
+            Self::InvalidArgValue(_) => 38,
         }
     }
 }

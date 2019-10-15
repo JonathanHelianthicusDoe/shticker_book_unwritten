@@ -3,6 +3,7 @@ use clap::{crate_name, crate_version};
 use reqwest::blocking as rb;
 use std::{
     io::{self, prelude::*},
+    num::NonZeroUsize,
     path::Path,
     process,
     time,
@@ -39,6 +40,7 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
     quiet: bool,
     maybe_usernames: Option<U>,
     detach: bool,
+    max_tries: NonZeroUsize,
 ) -> Result<(), Error> {
     let mut children = Vec::new();
     if let Some(usernames) = maybe_usernames {
@@ -146,7 +148,7 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
             Some("update") | Some("up") => {
                 check_children(quiet, &mut children)?;
                 if children.is_empty() {
-                    update::update(config, client, quiet)?
+                    update::update(config, client, quiet, max_tries)?
                 } else if children.len() == 1 {
                     println!(
                         "There's still a game instance running, can't update \
@@ -345,7 +347,7 @@ fn kill_instance(
         if !quiet {
             println!(
                 "Successfully killed {}'s instance with pid {},",
-                name, pid
+                name, pid,
             );
             let secs = uptime_sec % 60;
             let minutes = (uptime_sec / 60) % 60;

@@ -6,6 +6,7 @@ use sha1::{Digest, Sha1};
 use std::{
     fs::{self, File},
     io::{self, prelude::*},
+    num::NonZeroUsize,
     path::{Path, PathBuf},
 };
 
@@ -23,17 +24,22 @@ pub fn update(
     config: &Config,
     client: &rb::Client,
     quiet: bool,
+    max_tries: NonZeroUsize,
 ) -> Result<(), Error> {
     ensure_dir(&config.install_dir)?;
     ensure_dir(&config.cache_dir)?;
 
-    let manifest_map = match get_manifest(config, client)? {
+    let manifest_map = match get_manifest(config, client, quiet, max_tries)? {
         serde_json::Value::Object(m) => m,
         _ =>
             return Err(Error::BadManifestFormat(
                 "Top-level value is not an Object".to_owned(),
             )),
     };
+
+    if !quiet {
+        println!("Downloaded manifest successfully!");
+    }
 
     let mut install_dir = config.install_dir.clone();
     for (i, (file_name, file_obj)) in manifest_map.iter().enumerate() {
@@ -158,11 +164,11 @@ pub fn update(
                         config,
                         client,
                         quiet,
+                        max_tries,
                         compressed_file_name,
                         file_name,
                         &compressed_sha,
                         &decompressed_sha,
-                        5,
                     )?;
 
                     None
@@ -184,6 +190,7 @@ pub fn update(
                 config,
                 client,
                 quiet,
+                max_tries,
                 f,
                 file_map,
                 file_name,
@@ -249,6 +256,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
     config: &Config,
     client: &rb::Client,
     quiet: bool,
+    max_tries: NonZeroUsize,
     mut already_existing_file: File,
     file_map: &serde_json::Map<String, serde_json::Value>,
     file_name: S,
@@ -350,6 +358,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
             config,
             client,
             quiet,
+            max_tries,
             patch_file_name,
             &extracted_patch_file_name,
             &patch_map
@@ -378,7 +387,6 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
                         "Expected \"patchHash\" to be a String".to_owned(),
                     )),
                 })?,
-            5,
         )?;
 
         if !quiet {
@@ -430,11 +438,11 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
             config,
             client,
             quiet,
+            max_tries,
             compressed_file_name,
             file_name,
             &compressed_sha,
             &manifest_sha,
-            5,
         )?;
     }
 
@@ -444,19 +452,68 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
 fn get_manifest(
     config: &Config,
     client: &rb::Client,
+    quiet: bool,
+    max_tries: NonZeroUsize,
 ) -> Result<serde_json::Value, Error> {
-    let manifest_resp = client
-        .get(&config.manifest_uri)
-        .send()
-        .map_err(Error::ManifestRequestError)?;
-    if !manifest_resp.status().is_success() {
-        return Err(Error::ManifestRequestStatusError(manifest_resp.status()));
+    let mut last_err = None;
+
+    for i in 1..=max_tries.get() {
+        let mut handle_retry = |e| {
+            eprintln!(
+                "{}{}",
+                e,
+                if i < max_tries.get() {
+                    ", retrying..."
+                } else {
+                    ", no more attempts remaining!"
+                },
+            );
+            last_err = Some(e);
+        };
+
+        if !quiet {
+            println!("Downloading manifest [attempt {}/{}]...", i, max_tries);
+        }
+
+        let manifest_resp = match client
+            .get(&config.manifest_uri)
+            .send()
+            .map_err(Error::ManifestRequestError)
+        {
+            Ok(mr) => mr,
+            Err(e) => {
+                handle_retry(e);
+
+                continue;
+            },
+        };
+        if !manifest_resp.status().is_success() {
+            handle_retry(Error::ManifestRequestStatusError(
+                manifest_resp.status(),
+            ));
+
+            continue;
+        }
+
+        let manifest_text =
+            match manifest_resp.text().map_err(Error::ManifestRequestError) {
+                Ok(mt) => mt,
+                Err(e) => {
+                    handle_retry(e);
+
+                    continue;
+                },
+            };
+
+        match serde_json::from_str(&manifest_text)
+            .map_err(Error::DeserializeError)
+        {
+            Err(e) => handle_retry(e),
+            ok => return ok,
+        }
     }
 
-    let manifest_text =
-        manifest_resp.text().map_err(Error::ManifestRequestError)?;
-
-    serde_json::from_str(&manifest_text).map_err(Error::DeserializeError)
+    Err(last_err.unwrap_or_else(|| unreachable!()))
 }
 
 fn sha_of_reader<R: Read>(
@@ -525,11 +582,11 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
     config: &Config,
     client: &rb::Client,
     quiet: bool,
+    max_tries: NonZeroUsize,
     compressed_file_name: S,
     decompressed_file_name: T,
     compressed_sha: &[u8; 20],
     decompressed_sha: &[u8; 20],
-    max_tries: usize,
 ) -> Result<PathBuf, Error> {
     let mut dl_uri = String::with_capacity(
         config.cdn_uri.len() + compressed_file_name.as_ref().len(),
@@ -558,7 +615,22 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         pb
     };
 
-    for i in 1..=max_tries {
+    let mut last_err = None;
+
+    for i in 1..=max_tries.get() {
+        let mut handle_retry = |e| {
+            eprintln!(
+                "        {}{}",
+                e,
+                if i < max_tries.get() {
+                    ", retrying..."
+                } else {
+                    ", no more attempts remaining!"
+                },
+            );
+            last_err = Some(e);
+        };
+
         if !quiet {
             println!(
                 "        Downloading {} [attempt {}/{}]",
@@ -575,16 +647,13 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         {
             Ok(dr) => dr,
             Err(e) => {
-                eprintln!("        {:?}", e);
+                handle_retry(e);
 
                 continue;
             },
         };
         if !dl_resp.status().is_success() {
-            eprintln!(
-                "        {:?}",
-                Error::DownloadRequestStatusError(dl_resp.status()),
-            );
+            handle_retry(Error::DownloadRequestStatusError(dl_resp.status()));
 
             continue;
         }
@@ -606,16 +675,21 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         let dled_sha = sha_of_file_by_path(&compressed_file_path, buf)?;
         if &dled_sha != compressed_sha {
             if !quiet {
-                print!("        SHA1 hash mismatch:\n          Local:    ");
+                eprint!("        SHA1 hash mismatch:\n          Local:    ");
                 for b in dled_sha.iter() {
-                    print!("{:02x}", b);
+                    eprint!("{:02x}", b);
                 }
-                print!("\n          Manifest: ");
+                eprint!("\n          Manifest: ");
                 for b in compressed_sha.iter() {
-                    print!("{:02x}", b);
+                    eprint!("{:02x}", b);
                 }
-                println!("\n        Re-downloading...");
+                eprintln!("\n        Re-downloading...");
             }
+
+            last_err = Some(Error::HashMismatch(
+                compressed_file_path.clone(),
+                *compressed_sha,
+            ));
 
             continue;
         }
@@ -633,16 +707,21 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         let extracted_sha = sha_of_file_by_path(&decompressed_file_path, buf)?;
         if &extracted_sha != decompressed_sha {
             if !quiet {
-                print!("        SHA1 hash mismatch:\n          Local:    ");
+                eprint!("        SHA1 hash mismatch:\n          Local:    ");
                 for b in extracted_sha.iter() {
-                    print!("{:02x}", b);
+                    eprint!("{:02x}", b);
                 }
-                print!("\n          Manifest: ");
+                eprint!("\n          Manifest: ");
                 for b in decompressed_sha.iter() {
-                    print!("{:02x}", b);
+                    eprint!("{:02x}", b);
                 }
-                println!("\n        Re-downloading...");
+                eprintln!("\n        Re-downloading...");
             }
+
+            last_err = Some(Error::HashMismatch(
+                decompressed_file_path.clone(),
+                *decompressed_sha,
+            ));
 
             continue;
         }
@@ -651,7 +730,13 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
             println!("        SHA1 hash matches!");
         }
 
+        last_err = None;
+
         break;
+    }
+
+    if let Some(e) = last_err {
+        return Err(e);
     }
 
     if !quiet {
