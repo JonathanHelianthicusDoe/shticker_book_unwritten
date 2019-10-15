@@ -160,7 +160,9 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
     while newpos < newsize {
         // Read control data
         for ctrl_off in ctrl.iter_mut() {
-            cpfbz2.read_exact(&mut buf).map_err(Error::DecodeError)?;
+            cpfbz2.read_exact(&mut buf).map_err(|ioe| {
+                Error::DecodeError(patch_file_path.as_ref().to_path_buf(), ioe)
+            })?;
             *ctrl_off = offtin(&buf);
         }
 
@@ -172,7 +174,9 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
         // Read diff string
         dpfbz2
             .read_exact(&mut new[newpos as usize..(newpos + ctrl[0]) as usize])
-            .map_err(Error::DecodeError)?;
+            .map_err(|ioe| {
+                Error::DecodeError(patch_file_path.as_ref().to_path_buf(), ioe)
+            })?;
 
         // Add old data to diff string
         for i in 0..ctrl[0] {
@@ -195,7 +199,9 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
         // Read extra string
         epfbz2
             .read_exact(&mut new[newpos as usize..(newpos + ctrl[1]) as usize])
-            .map_err(Error::DecodeError)?;
+            .map_err(|ioe| {
+                Error::DecodeError(patch_file_path.as_ref().to_path_buf(), ioe)
+            })?;
 
         // Adjust pointers
         newpos += ctrl[1];

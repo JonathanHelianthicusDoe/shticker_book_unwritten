@@ -20,8 +20,8 @@ pub enum Error {
     FileWriteError(PathBuf, io::Error),
     DownloadRequestError(reqwest::Error),
     DownloadRequestStatusError(reqwest::StatusCode),
-    CopyIntoFileError(reqwest::Error),
-    DecodeError(io::Error),
+    CopyIntoFileError(PathBuf, reqwest::Error),
+    DecodeError(PathBuf, io::Error),
     BadPatchVersion,
     BadPatchSize,
     SeekError(io::Error),
@@ -90,19 +90,19 @@ impl fmt::Display for Error {
             Self::FileWriteError(path, ioe) =>
                 write!(f, "Failed to write to {:?}:\n\t{}", path, ioe),
             Self::DownloadRequestError(dre) =>
-                write!(f, "Error requesting download:\n\t{}", dre),
-            Self::DownloadRequestStatusError(sc) => write!(
+                write!(f, "Error requesting download: {}", dre),
+            Self::DownloadRequestStatusError(sc) =>
+                write!(f, "Bad status code after requesting download: {}", sc),
+            Self::CopyIntoFileError(path, cife) => write!(
                 f,
-                "Bad status code after requesting download:\n\t{}",
-                sc,
+                "Failure copying HTTP-downloaded data into {:?}:\n\t{}",
+                path, cife,
             ),
-            Self::CopyIntoFileError(cife) => write!(
+            Self::DecodeError(path, ioe) => write!(
                 f,
-                "Failure copying HTTP-downloaded data into file:\n\t{}",
-                cife,
+                "Error decoding bzip2 in file {:?}:\n\t{}",
+                path, ioe,
             ),
-            Self::DecodeError(ioe) =>
-                write!(f, "Error decoding bzip2:\n\t{}", ioe),
             Self::BadPatchVersion => f.write_str(
                 "Unable to determine patch's version, or patch is invalid",
             ),
@@ -167,8 +167,8 @@ impl Error {
             Self::FileWriteError(_, _) => 14,
             Self::DownloadRequestError(_) => 15,
             Self::DownloadRequestStatusError(_) => 16,
-            Self::CopyIntoFileError(_) => 17,
-            Self::DecodeError(_) => 18,
+            Self::CopyIntoFileError(_, _) => 17,
+            Self::DecodeError(_, _) => 18,
             Self::BadPatchVersion => 19,
             Self::BadPatchSize => 20,
             Self::SeekError(_) => 21,

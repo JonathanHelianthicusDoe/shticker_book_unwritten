@@ -568,19 +568,32 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
             );
         }
 
-        let mut dl_resp = client
+        let mut dl_resp = match client
             .get(&dl_uri)
             .send()
-            .map_err(Error::DownloadRequestError)?;
+            .map_err(Error::DownloadRequestError)
+        {
+            Ok(dr) => dr,
+            Err(e) => {
+                eprintln!("        {:?}", e);
+
+                continue;
+            },
+        };
         if !dl_resp.status().is_success() {
-            return Err(Error::DownloadRequestStatusError(dl_resp.status()));
+            eprintln!(
+                "        {:?}",
+                Error::DownloadRequestStatusError(dl_resp.status()),
+            );
+
+            continue;
         }
 
         {
             let mut dled_file = util::create_file(&compressed_file_path)?;
-            dl_resp
-                .copy_to(&mut dled_file)
-                .map_err(Error::CopyIntoFileError)?;
+            dl_resp.copy_to(&mut dled_file).map_err(|re| {
+                Error::CopyIntoFileError(compressed_file_path.clone(), re)
+            })?;
         }
 
         if !quiet {
@@ -662,7 +675,7 @@ fn decompress_file<P: AsRef<Path>>(
     compressed_path: P,
     decompress_path: P,
 ) -> Result<(), Error> {
-    let decompressed_file = util::create_file(decompress_path)?;
+    let decompressed_file = util::create_file(&decompress_path)?;
     let mut decoder = BzWriteDecoder::new(decompressed_file);
 
     let mut compressed_file = util::open_file(&compressed_path)?;
@@ -672,10 +685,14 @@ fn decompress_file<P: AsRef<Path>>(
         n = compressed_file.read(buf).map_err(|ioe| {
             Error::FileReadError(compressed_path.as_ref().to_path_buf(), ioe)
         })?;
-        decoder.write_all(&buf[..n]).map_err(Error::DecodeError)?;
+        decoder.write_all(&buf[..n]).map_err(|ioe| {
+            Error::DecodeError(decompress_path.as_ref().to_path_buf(), ioe)
+        })?;
     }
 
-    decoder.finish().map(|_| ()).map_err(Error::DecodeError)
+    decoder.finish().map(|_| ()).map_err(|ioe| {
+        Error::DecodeError(decompress_path.as_ref().to_path_buf(), ioe)
+    })
 }
 
 fn ensure_dir<P: AsRef<Path>>(path: P) -> Result<(), Error> {
