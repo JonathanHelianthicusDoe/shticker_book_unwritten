@@ -45,9 +45,10 @@ fn run() -> Result<(), Error> {
     );
     #[cfg(target_os = "macos")]
     const CONFIG_LONG_HELP: &str = concat!(
-        r"Configuration JSON file to use. Defaults to $HOME/Library/Preferences/",
+        "Configuration JSON file to use. Defaults to ",
+        "$HOME/Library/Preferences/",
         crate_name!(),
-        r"/config.json",
+        "/config.json",
     );
 
     let arg_matches = App::new(crate_name!())

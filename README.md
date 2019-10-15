@@ -14,7 +14,8 @@ Inspired by [Shticker Book
 Rewritten](https://github.com/madsciencecoder/Shticker-Book-Rewritten).
 
 Currently builds and functions on GNU/Linux, Windows NT (using the MSVC
-toolchain), and OS X (Be sure to allow terminal the ability to monitor inputs).
+toolchain), and macOS (be sure to allow terminal the ability to monitor
+inputs).
 
 ## Installing
 
@@ -27,7 +28,8 @@ on GitHub.
 ### From [crates.io](https://crates.io/)
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
-can get from [rustup](https://rustup.rs/). *OS X (and maybe others): If the build fails, try using the nightly branch of rust.*
+can get from [rustup](https://rustup.rs/). *Note for macOS (and maybe others):
+If the build fails, try using nightly rustc.*
 
 ```bash
 cargo install shticker_book_unwritten
@@ -43,7 +45,8 @@ cargo install -f shticker_book_unwritten
 ### From GitHub git repository
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
-can get from [rustup](https://rustup.rs/). *OS X (and maybe others): If the build fails, try using the nightly branch of rust.*
+can get from [rustup](https://rustup.rs/). *Note for macOS (and maybe others):
+If the build fails, try using nightly rustc.*
 
 ```bash
 git clone https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten.git

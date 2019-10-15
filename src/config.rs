@@ -130,17 +130,22 @@ pub fn get_config(
                     match key.as_str() {
                         "HOME" => home = value,
                         _ =>
-                            if !(home.is_empty())
-                            {
+                            if !(home.is_empty()) {
                                 break;
                             },
                     }
                 }
 
                 if !home.is_empty() {
-                    [home.as_str(), "Library", "Preferences", crate_name!(), "config.json"]
-                        .iter()
-                        .collect()
+                    [
+                        home.as_str(),
+                        "Library",
+                        "Preferences",
+                        crate_name!(),
+                        "config.json",
+                    ]
+                    .iter()
+                    .collect()
                 } else {
                     return Err(Error::NoPossibleConfigPath);
                 }

@@ -370,10 +370,9 @@ fn launch<S: AsRef<OsStr>, T: AsRef<OsStr>>(
 
         command_buf
     };
-
     #[cfg(target_os = "macos")]
     let command_text = {
-        // `.current_dir` is also borked on OS X
+        // `.current_dir` is also borked on macOS.
         let mut command_buf = config.install_dir.clone();
         command_buf.push("Toontown Rewritten");
 

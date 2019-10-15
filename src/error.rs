@@ -57,9 +57,8 @@ impl fmt::Display for Error {
                                    %APPDATA% environment variable is unset \
                                    or empty";
                 #[cfg(target_os = "macos")]
-                const MSG: &str = "No config path was given, and the \
-                                   $HOME environment variable is unset \
-                                   or empty";
+                const MSG: &str = "No config path was given, and the $HOME \
+                                   environment variable is unset or empty";
 
                 f.write_str(MSG)
             },

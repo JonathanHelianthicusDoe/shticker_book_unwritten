@@ -187,19 +187,23 @@ pub fn update(
         install_dir.pop();
     }
 
-    //Might want to merge these two due to them having roughly similar code.
-    #[cfg(target_os = "linux")]
+    #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
 
+        #[cfg(target_os = "linux")]
+        const EXE_NAME: &str = "TTREngine";
+        #[cfg(target_os = "macos")]
+        const EXE_NAME: &str = "Toontown Rewritten";
+
         if !quiet {
-            println!("Making sure TTREngine is executable...");
+            println!("Making sure {} is executable...", EXE_NAME);
         }
 
-        install_dir.push("TTREngine");
+        install_dir.push(EXE_NAME);
         let mut ttrengine_perms = fs::metadata(&install_dir)
             .map_err(|ioe| match ioe.kind() {
-                io::ErrorKind::NotFound => Error::MissingFile("TTREngine"),
+                io::ErrorKind::NotFound => Error::MissingFile(EXE_NAME),
                 io::ErrorKind::PermissionDenied =>
                     Error::PermissionDenied(ioe),
                 _ => Error::UnknownIoError(ioe),
@@ -209,7 +213,8 @@ pub fn update(
         if (ttrengine_mode & 0o100) == 0 {
             if !quiet {
                 println!(
-                    "TTREngine isn't executable, setting executable bit..."
+                    "{} isn't executable, setting executable bit...",
+                    EXE_NAME,
                 );
             }
 
@@ -218,47 +223,10 @@ pub fn update(
                 .map_err(Error::PermissionsSetError)?;
 
             if !quiet {
-                println!("TTREngine is now executable!");
+                println!("{} is now executable!", EXE_NAME);
             }
         } else if !quiet {
-            println!("TTREngine is already executable!");
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        use std::os::unix::fs::PermissionsExt;
-
-        if !quiet {
-            println!("Making sure Toontown Rewritten is executable...");
-        }
-
-        install_dir.push("Toontown Rewritten");
-        let mut ttrengine_perms = fs::metadata(&install_dir)
-            .map_err(|ioe| match ioe.kind() {
-                io::ErrorKind::NotFound => Error::MissingFile("Toontown Rewritten"),
-                io::ErrorKind::PermissionDenied =>
-                    Error::PermissionDenied(ioe),
-                _ => Error::UnknownIoError(ioe),
-            })?
-            .permissions();
-        let ttrengine_mode = ttrengine_perms.mode();
-        if (ttrengine_mode & 0o100) == 0 {
-            if !quiet {
-                println!(
-                    "Toontown Rewritten isn't executable, setting executable bit..."
-                );
-            }
-
-            ttrengine_perms.set_mode(ttrengine_mode | 0o700);
-            fs::set_permissions(&install_dir, ttrengine_perms)
-                .map_err(Error::PermissionsSetError)?;
-
-            if !quiet {
-                println!("Toontown Rewritten is now executable!");
-            }
-        } else if !quiet {
-            println!("Toontown Rewritten is already executable!");
+            println!("{} is already executable!", EXE_NAME);
         }
     }
 
