@@ -36,13 +36,12 @@
 //!  */
 //! ```
 
-use crate::error::Error;
+use crate::{error::Error, util};
 use bzip2::read::BzDecoder as BzReadDecoder;
 use std::{
     self,
     ffi::{OsStr, OsString},
-    fs::File,
-    io::{self, prelude::*, Seek, SeekFrom},
+    io::{prelude::*, Seek, SeekFrom},
     path::Path,
 };
 
@@ -72,12 +71,10 @@ fn bsdiff_patch<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
     let new = apply_patch(patch_file_path, old_file_path)?;
 
     // Write the new file
-    let mut fd =
-        File::create(new_file_path).map_err(|ioe| match ioe.kind() {
-            io::ErrorKind::PermissionDenied => Error::PermissionDenied(ioe),
-            _ => Error::UnknownIoError(ioe),
-        })?;
-    fd.write_all(&new[..]).map_err(Error::FileWriteError)?;
+    let mut fd = util::create_file(&new_file_path)?;
+    fd.write_all(&new[..]).map_err(|ioe| {
+        Error::FileWriteError(new_file_path.as_ref().to_path_buf(), ioe)
+    })?;
 
     Ok(())
 }
@@ -88,12 +85,7 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
 ) -> Result<Vec<u8>, Error> {
     let header = {
         // Open patch file
-        let mut f =
-            File::open(&patch_file_path).map_err(|ioe| match ioe.kind() {
-                io::ErrorKind::PermissionDenied =>
-                    Error::PermissionDenied(ioe),
-                _ => Error::UnknownIoError(ioe),
-            })?;
+        let mut f = util::open_file(&patch_file_path)?;
 
         /*
          * File format:
@@ -115,7 +107,9 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
 
         // Read header
         let mut header = [0u8; 32];
-        f.read_exact(&mut header).map_err(Error::FileReadError)?;
+        f.read_exact(&mut header).map_err(|ioe| {
+            Error::FileReadError(patch_file_path.as_ref().to_path_buf(), ioe)
+        })?;
 
         header
     };
@@ -134,40 +128,26 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
     }
 
     // Open patch file in the right places with libbzip2
-    let mut cpf =
-        File::open(&patch_file_path).map_err(|ioe| match ioe.kind() {
-            io::ErrorKind::PermissionDenied => Error::PermissionDenied(ioe),
-            _ => Error::UnknownIoError(ioe),
-        })?;
+    let mut cpf = util::open_file(&patch_file_path)?;
     cpf.seek(SeekFrom::Start(32)).map_err(Error::SeekError)?;
     let mut cpfbz2 = BzReadDecoder::new(cpf);
-    let mut dpf =
-        File::open(&patch_file_path).map_err(|ioe| match ioe.kind() {
-            io::ErrorKind::PermissionDenied => Error::PermissionDenied(ioe),
-            _ => Error::UnknownIoError(ioe),
-        })?;
+    let mut dpf = util::open_file(&patch_file_path)?;
     dpf.seek(SeekFrom::Start((32 + bzctrllen) as u64))
         .map_err(Error::SeekError)?;
     let mut dpfbz2 = BzReadDecoder::new(dpf);
-    let mut epf =
-        File::open(&patch_file_path).map_err(|ioe| match ioe.kind() {
-            io::ErrorKind::PermissionDenied => Error::PermissionDenied(ioe),
-            _ => Error::UnknownIoError(ioe),
-        })?;
+    let mut epf = util::open_file(&patch_file_path)?;
     epf.seek(SeekFrom::Start((32 + bzctrllen + bzdatalen) as u64))
         .map_err(Error::SeekError)?;
     let mut epfbz2 = BzReadDecoder::new(epf);
 
-    let mut fd =
-        File::open(old_file_path).map_err(|ioe| match ioe.kind() {
-            io::ErrorKind::PermissionDenied => Error::PermissionDenied(ioe),
-            _ => Error::UnknownIoError(ioe),
-        })?;
+    let mut fd = util::open_file(&old_file_path)?;
     let oldsize = fd.seek(SeekFrom::End(0)).map_err(Error::SeekError)? as i64;
     let mut old = Vec::with_capacity(oldsize as usize);
     old.resize_with(oldsize as usize, Default::default);
     fd.seek(SeekFrom::Start(0)).map_err(Error::SeekError)?;
-    fd.read_exact(&mut old[..]).map_err(Error::FileReadError)?;
+    fd.read_exact(&mut old[..]).map_err(|ioe| {
+        Error::FileReadError(old_file_path.as_ref().to_path_buf(), ioe)
+    })?;
 
     let mut new = Vec::with_capacity(newsize as usize);
     new.resize_with(newsize as usize, Default::default);

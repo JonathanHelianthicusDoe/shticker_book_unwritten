@@ -6,18 +6,18 @@ use std::{error, fmt, io, path::PathBuf};
 pub enum Error {
     NoPossibleConfigPath,
     BadConfigPath(PathBuf),
-    MkdirError(io::Error),
-    PermissionDenied(io::Error),
+    MkdirError(PathBuf, io::Error),
+    PermissionDenied(String, io::Error),
     StdoutError(io::Error),
     StdinError(io::Error),
-    UnknownIoError(io::Error),
+    UnknownIoError(String, io::Error),
     SerializeError(serde_json::Error),
     DeserializeError(serde_json::Error),
     ManifestRequestError(reqwest::Error),
     ManifestRequestStatusError(reqwest::StatusCode),
     BadManifestFormat(String),
-    FileReadError(io::Error),
-    FileWriteError(io::Error),
+    FileReadError(PathBuf, io::Error),
+    FileWriteError(PathBuf, io::Error),
     DownloadRequestError(reqwest::Error),
     DownloadRequestStatusError(reqwest::StatusCode),
     CopyIntoFileError(reqwest::Error),
@@ -64,14 +64,14 @@ impl fmt::Display for Error {
             },
             Self::BadConfigPath(bcp) =>
                 write!(f, "Bad config file path specified: {}", bcp.display()),
-            Self::MkdirError(ioe) =>
-                write!(f, "`mkdir -p` failed:\n\t{}", ioe),
-            Self::PermissionDenied(ioe) =>
-                write!(f, "Permission denied:\n\t{}", ioe),
+            Self::MkdirError(path, ioe) =>
+                write!(f, "`mkdir -p {:?}` failed:\n\t{}", path, ioe),
+            Self::PermissionDenied(info, ioe) =>
+                write!(f, "Permission denied while {}:\n\t{}", info, ioe),
             Self::StdoutError(ioe) => write!(f, "stdout error:\n\t{}", ioe),
             Self::StdinError(ioe) => write!(f, "stdin error:\n\t{}", ioe),
-            Self::UnknownIoError(ioe) =>
-                write!(f, "Unknown I/O error:\n\t{}", ioe),
+            Self::UnknownIoError(info, ioe) =>
+                write!(f, "Unknown I/O error while {}:\n\t{}", info, ioe),
             Self::SerializeError(se) =>
                 write!(f, "Failed to write JSON:\n\t{}", se),
             Self::DeserializeError(de) =>
@@ -85,10 +85,10 @@ impl fmt::Display for Error {
             ),
             Self::BadManifestFormat(s) =>
                 write!(f, "Bad manifest format:\n\t{}", s),
-            Self::FileReadError(ioe) =>
-                write!(f, "Failed to read from file:\n\t{}", ioe),
-            Self::FileWriteError(ioe) =>
-                write!(f, "Failed to write to file:\n\t{}", ioe),
+            Self::FileReadError(path, ioe) =>
+                write!(f, "Failed to read from {:?}:\n\t{}", path, ioe),
+            Self::FileWriteError(path, ioe) =>
+                write!(f, "Failed to write to {:?}:\n\t{}", path, ioe),
             Self::DownloadRequestError(dre) =>
                 write!(f, "Error requesting download:\n\t{}", dre),
             Self::DownloadRequestStatusError(sc) => write!(
@@ -99,7 +99,7 @@ impl fmt::Display for Error {
             Self::CopyIntoFileError(cife) => write!(
                 f,
                 "Failure copying HTTP-downloaded data into file:\n\t{}",
-                cife
+                cife,
             ),
             Self::DecodeError(ioe) =>
                 write!(f, "Error decoding bzip2:\n\t{}", ioe),
@@ -153,18 +153,18 @@ impl Error {
         match self {
             Self::NoPossibleConfigPath => 1,
             Self::BadConfigPath(_) => 2,
-            Self::MkdirError(_) => 3,
-            Self::PermissionDenied(_) => 4,
+            Self::MkdirError(_, _) => 3,
+            Self::PermissionDenied(_, _) => 4,
             Self::StdoutError(_) => 5,
             Self::StdinError(_) => 6,
-            Self::UnknownIoError(_) => 7,
+            Self::UnknownIoError(_, _) => 7,
             Self::SerializeError(_) => 8,
             Self::DeserializeError(_) => 9,
             Self::ManifestRequestError(_) => 10,
             Self::ManifestRequestStatusError(_) => 11,
             Self::BadManifestFormat(_) => 12,
-            Self::FileReadError(_) => 13,
-            Self::FileWriteError(_) => 14,
+            Self::FileReadError(_, _) => 13,
+            Self::FileWriteError(_, _) => 14,
             Self::DownloadRequestError(_) => 15,
             Self::DownloadRequestStatusError(_) => 16,
             Self::CopyIntoFileError(_) => 17,

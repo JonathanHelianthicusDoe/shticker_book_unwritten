@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::{error::Error, util};
 use clap::crate_name;
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -162,17 +162,15 @@ pub fn get_config(
                 .map(|c| (inject_arg_values(c), config_path)),
             Err(ioe) => match ioe.kind() {
                 io::ErrorKind::NotFound => {
-                    fs::create_dir_all(config_path.parent().ok_or_else(
-                        || Error::BadConfigPath(config_path.clone()),
-                    )?)
-                    .map_err(Error::MkdirError)?;
-
-                    let mut new_config_file = File::create(&config_path)
-                        .map_err(|ioe| match ioe.kind() {
-                            io::ErrorKind::PermissionDenied =>
-                                Error::PermissionDenied(ioe),
-                            _ => Error::UnknownIoError(ioe),
+                    let config_dir =
+                        config_path.parent().ok_or_else(|| {
+                            Error::BadConfigPath(config_path.clone())
                         })?;
+                    fs::create_dir_all(config_dir).map_err(|ioe| {
+                        Error::MkdirError(config_dir.to_path_buf(), ioe)
+                    })?;
+
+                    let mut new_config_file = util::create_file(&config_path)?;
                     let new_config = prompt_for_config_values(&config_path)?;
 
                     serde_json::to_writer_pretty(
@@ -184,8 +182,14 @@ pub fn get_config(
                     Ok((inject_arg_values(new_config), config_path))
                 },
                 io::ErrorKind::PermissionDenied =>
-                    Err(Error::PermissionDenied(ioe)),
-                _ => Err(Error::UnknownIoError(ioe)),
+                    Err(Error::PermissionDenied(
+                        format!("opening {:?}", config_path),
+                        ioe,
+                    )),
+                _ => Err(Error::UnknownIoError(
+                    format!("opening {:?}", config_path),
+                    ioe,
+                )),
             },
         }
     } else {
@@ -275,11 +279,7 @@ pub fn commit_config<P: AsRef<Path>>(
     config: &Config,
     config_path: P,
 ) -> Result<(), Error> {
-    let mut config_file =
-        File::create(&config_path).map_err(|ioe| match ioe.kind() {
-            io::ErrorKind::PermissionDenied => Error::PermissionDenied(ioe),
-            _ => Error::UnknownIoError(ioe),
-        })?;
+    let mut config_file = util::create_file(&config_path)?;
 
     serde_json::to_writer_pretty(&mut config_file, config)
         .map_err(Error::SerializeError)

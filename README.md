@@ -28,8 +28,12 @@ on GitHub.
 ### From [crates.io](https://crates.io/)
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
-can get from [rustup](https://rustup.rs/). *Note for macOS (and maybe others):
-If the build fails, try using nightly rustc.*
+can get from [rustup](https://rustup.rs/). Although shticker\_book\_unwritten
+does not make use of `async`/`await` itself, it depends on
+[reqwest](https://github.com/seanmonstar/reqwest), which requires this language
+feature on its latest releases: as such, shticker\_book\_unwritten will only
+compile on beta and nightly rustc, at least until `async`/`await` is
+stabilized.
 
 ```bash
 cargo install shticker_book_unwritten
@@ -45,8 +49,12 @@ cargo install -f shticker_book_unwritten
 ### From GitHub git repository
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
-can get from [rustup](https://rustup.rs/). *Note for macOS (and maybe others):
-If the build fails, try using nightly rustc.*
+can get from [rustup](https://rustup.rs/). Although shticker\_book\_unwritten
+does not make use of `async`/`await` itself, it depends on
+[reqwest](https://github.com/seanmonstar/reqwest), which requires this language
+feature on its latest releases: as such, shticker\_book\_unwritten will only
+compile on beta and nightly rustc, at least until `async`/`await` is
+stabilized.
 
 ```bash
 git clone https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten.git

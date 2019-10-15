@@ -1,4 +1,4 @@
-use crate::{config::Config, error::Error, patch};
+use crate::{config::Config, error::Error, patch, util};
 use bzip2::write::BzDecoder as BzWriteDecoder;
 use reqwest::blocking as rb;
 use serde_json;
@@ -168,8 +168,15 @@ pub fn update(
                     None
                 },
                 io::ErrorKind::PermissionDenied =>
-                    return Err(Error::PermissionDenied(ioe)),
-                _ => return Err(Error::UnknownIoError(ioe)),
+                    return Err(Error::PermissionDenied(
+                        format!("opening {:?}", install_dir),
+                        ioe,
+                    )),
+                _ =>
+                    return Err(Error::UnknownIoError(
+                        format!("opening {:?}", install_dir),
+                        ioe,
+                    )),
             },
         };
         if let Some(f) = already_existing_file {
@@ -204,9 +211,14 @@ pub fn update(
         let mut ttrengine_perms = fs::metadata(&install_dir)
             .map_err(|ioe| match ioe.kind() {
                 io::ErrorKind::NotFound => Error::MissingFile(EXE_NAME),
-                io::ErrorKind::PermissionDenied =>
-                    Error::PermissionDenied(ioe),
-                _ => Error::UnknownIoError(ioe),
+                io::ErrorKind::PermissionDenied => Error::PermissionDenied(
+                    format!("obtaining metadata for {:?}", install_dir),
+                    ioe,
+                ),
+                _ => Error::UnknownIoError(
+                    format!("obtaining metadata for {:?}", install_dir),
+                    ioe,
+                ),
             })?
             .permissions();
         let ttrengine_mode = ttrengine_perms.mode();
@@ -247,8 +259,10 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
     }
 
     let mut file_buf = [0u8; BUFFER_SIZE];
-    let initial_sha =
-        sha_of_reader(&mut already_existing_file, &mut file_buf)?;
+    let initial_sha = sha_of_reader(&mut already_existing_file, &mut file_buf)
+        .map_err(|ioe| {
+            Error::FileReadError(full_file_path.as_ref().to_path_buf(), ioe)
+        })?;
 
     let manifest_sha = sha_from_hash_str(match file_map.get("hash") {
         Some(serde_json::Value::String(s)) => s,
@@ -448,11 +462,11 @@ fn get_manifest(
 fn sha_of_reader<R: Read>(
     r: &mut R,
     buf: &mut [u8],
-) -> Result<[u8; 20], Error> {
+) -> Result<[u8; 20], io::Error> {
     let mut sha = Sha1::default();
     let mut n = buf.len();
     while n == buf.len() {
-        n = r.read(buf).map_err(Error::FileReadError)?;
+        n = r.read(buf)?;
         sha.input(&buf[..n]);
     }
 
@@ -463,15 +477,14 @@ fn sha_of_file_by_path<P: AsRef<Path>>(
     path: P,
     buf: &mut [u8],
 ) -> Result<[u8; 20], Error> {
-    let mut file = File::open(path).map_err(|ioe| match ioe.kind() {
-        io::ErrorKind::PermissionDenied => Error::PermissionDenied(ioe),
-        _ => Error::UnknownIoError(ioe),
-    })?;
+    let mut file = util::open_file(&path)?;
 
     let mut sha = Sha1::default();
     let mut n = buf.len();
     while n == buf.len() {
-        n = file.read(buf).map_err(Error::FileReadError)?;
+        n = file.read(buf).map_err(|ioe| {
+            Error::FileReadError(path.as_ref().to_path_buf(), ioe)
+        })?;
         sha.input(&buf[..n]);
     }
 
@@ -564,13 +577,7 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         }
 
         {
-            let mut dled_file = File::create(&compressed_file_path).map_err(
-                |ioe| match ioe.kind() {
-                    io::ErrorKind::PermissionDenied =>
-                        Error::PermissionDenied(ioe),
-                    _ => Error::UnknownIoError(ioe),
-                },
-            )?;
+            let mut dled_file = util::create_file(&compressed_file_path)?;
             dl_resp
                 .copy_to(&mut dled_file)
                 .map_err(Error::CopyIntoFileError)?;
@@ -655,22 +662,16 @@ fn decompress_file<P: AsRef<Path>>(
     compressed_path: P,
     decompress_path: P,
 ) -> Result<(), Error> {
-    let decompressed_file =
-        File::create(decompress_path).map_err(|ioe| match ioe.kind() {
-            io::ErrorKind::PermissionDenied => Error::PermissionDenied(ioe),
-            _ => Error::UnknownIoError(ioe),
-        })?;
+    let decompressed_file = util::create_file(decompress_path)?;
     let mut decoder = BzWriteDecoder::new(decompressed_file);
 
-    let mut compressed_file =
-        File::open(compressed_path).map_err(|ioe| match ioe.kind() {
-            io::ErrorKind::PermissionDenied => Error::PermissionDenied(ioe),
-            _ => Error::UnknownIoError(ioe),
-        })?;
+    let mut compressed_file = util::open_file(&compressed_path)?;
 
     let mut n = buf.len();
     while n == buf.len() {
-        n = compressed_file.read(buf).map_err(Error::FileReadError)?;
+        n = compressed_file.read(buf).map_err(|ioe| {
+            Error::FileReadError(compressed_path.as_ref().to_path_buf(), ioe)
+        })?;
         decoder.write_all(&buf[..n]).map_err(Error::DecodeError)?;
     }
 
@@ -687,10 +688,17 @@ fn ensure_dir<P: AsRef<Path>>(path: P) -> Result<(), Error> {
             },
         Err(ioe) => match ioe.kind() {
             io::ErrorKind::NotFound =>
-                fs::create_dir_all(path).map_err(Error::MkdirError),
-            io::ErrorKind::PermissionDenied =>
-                Err(Error::PermissionDenied(ioe)),
-            _ => Err(Error::UnknownIoError(ioe)),
+                fs::create_dir_all(&path).map_err(|ioe| {
+                    Error::MkdirError(path.as_ref().to_path_buf(), ioe)
+                }),
+            io::ErrorKind::PermissionDenied => Err(Error::PermissionDenied(
+                format!("obtaining metadata for {:?}", path.as_ref()),
+                ioe,
+            )),
+            _ => Err(Error::UnknownIoError(
+                format!("obtaining metadata for {:?}", path.as_ref()),
+                ioe,
+            )),
         },
     }
 }

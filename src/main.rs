@@ -7,6 +7,7 @@ mod error;
 mod login;
 mod patch;
 mod update;
+mod util;
 
 use clap::{
     crate_authors,
