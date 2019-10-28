@@ -9,9 +9,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub const DEFAULT_MANIFEST_URI: &str =
+const DEFAULT_MANIFEST_URI: &str =
     "https://cdn.toontownrewritten.com/content/patchmanifest.txt";
-pub const DEFAULT_CDN_URI: &str =
+const DEFAULT_CDN_URI: &str =
     "https://s3.amazonaws.com/download.toontownrewritten.com/patches/";
 
 #[derive(Deserialize, Serialize, Debug)]
