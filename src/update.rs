@@ -25,9 +25,12 @@ pub fn update(
     client: &rb::Client,
     quiet: bool,
     max_tries: NonZeroUsize,
+    dry: bool,
 ) -> Result<(), Error> {
     ensure_dir(&config.install_dir)?;
-    ensure_dir(&config.cache_dir)?;
+    if !dry {
+        ensure_dir(&config.cache_dir)?;
+    }
 
     let manifest_map = match get_manifest(config, client, quiet, max_tries)? {
         serde_json::Value::Object(m) => m,
@@ -108,10 +111,20 @@ pub fn update(
             Err(ioe) => match ioe.kind() {
                 io::ErrorKind::NotFound => {
                     if !quiet {
-                        println!(
-                            "        File doesn't exist, downloading from \
-                             scratch..."
-                        );
+                        if dry {
+                            println!(
+                                "        File doesn't exist! Suppressing \
+                                 download because this is a dry run."
+                            );
+                            install_dir.pop();
+
+                            continue;
+                        } else {
+                            println!(
+                                "        File doesn't exist, downloading \
+                                 from scratch..."
+                            );
+                        }
                     }
 
                     let mut file_buf = [0u8; BUFFER_SIZE];
@@ -190,6 +203,7 @@ pub fn update(
                 config,
                 client,
                 quiet,
+                dry,
                 max_tries,
                 f,
                 file_map,
@@ -203,6 +217,10 @@ pub fn update(
 
     #[cfg(unix)]
     {
+        if dry {
+            return Ok(());
+        }
+
         use std::os::unix::fs::PermissionsExt;
 
         #[cfg(target_os = "linux")]
@@ -256,6 +274,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
     config: &Config,
     client: &rb::Client,
     quiet: bool,
+    dry: bool,
     max_tries: NonZeroUsize,
     mut already_existing_file: File,
     file_map: &serde_json::Map<String, serde_json::Value>,
@@ -345,7 +364,16 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
             })?;
 
         if !quiet {
-            println!("        Found a patch! Downloading it...");
+            if dry {
+                println!(
+                    "        Found a patch! Suppressed downloading patch \
+                     because this is a dry run."
+                );
+
+                return Ok(());
+            } else {
+                println!("        Found a patch! Downloading it...");
+            }
         }
 
         let mut extracted_patch_file_name =
@@ -406,7 +434,18 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
 
     if !did_patch {
         if !quiet {
-            println!("        No patches found, downloading from scratch...");
+            if dry {
+                println!(
+                    "        No patches found! Suppressing download because \
+                     this is a dry run."
+                );
+
+                return Ok(());
+            } else {
+                println!(
+                    "        No patches found, downloading from scratch..."
+                );
+            }
         }
 
         let compressed_file_name = file_map

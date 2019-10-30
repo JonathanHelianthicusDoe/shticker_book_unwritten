@@ -180,6 +180,21 @@ fn run() -> Result<(), Error> {
                 )
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("dry-update")
+                .short("y")
+                .long("dry-update")
+                .help(
+                    "When auto-updating, only check if updates are available.",
+                )
+                .long_help(
+                    "This flag causes auto-updating to only check whether or \
+                     not updates are available, and for which files; that \
+                     is, no updates will be downloaded nor applied.",
+                )
+                .takes_value(false)
+                .conflicts_with("no-auto-update"),
+        )
         .get_matches();
 
     let quiet = arg_matches.is_present("quiet");
@@ -204,7 +219,13 @@ fn run() -> Result<(), Error> {
         .map_err(Error::HttpClientCreateError)?;
 
     if !arg_matches.is_present("no-auto-update") {
-        update::update(&config, &client, quiet, max_tries)?;
+        update::update(
+            &config,
+            &client,
+            quiet,
+            max_tries,
+            arg_matches.is_present("dry-update"),
+        )?;
 
         if !quiet {
             println!();

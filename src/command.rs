@@ -15,9 +15,11 @@ Commands
   help, ?                          Display this help text.
   about                            Display info about this program.
   quit, exit                       Quit this program.
-  update, up                       Update the game files.
+  update, up                       Update the game files. Specify -y or
+    [-y | --dry-update]              --dry-update to only check if updates are
+                                     available.
   login, play, launch              Launch TTR. Specify -n or --no-save to not
-    [username] [-n, --no-save]       save this login, even if it's successful.
+    [username] [-n | --no-save]      save this login, even if it's successful.
   instances, running               List currently running TTR instances.
   kill, close <instance>           Forcibly close a running TTR instance. The
                                      instance is specified by its PID or by
@@ -147,19 +149,38 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
             },
             Some("update") | Some("up") => {
                 check_children(quiet, &mut children)?;
-                if children.is_empty() {
-                    update::update(config, client, quiet, max_tries)?
-                } else if children.len() == 1 {
-                    println!(
-                        "There's still a game instance running, can't update \
-                         now!",
-                    );
+
+                let mut dry = false;
+                for arg in argv {
+                    match arg {
+                        "-y" | "--dry-update" => dry = true,
+                        _ => {
+                            println!("Unexpected argument: {}", arg);
+
+                            continue 'outer;
+                        },
+                    }
+                }
+
+                if dry {
+                    update::update(config, client, quiet, max_tries, dry)?
                 } else {
-                    println!(
-                        "There are still {} game instances running, can't \
-                         update now!",
-                        children.len(),
-                    );
+                    if children.is_empty() {
+                        update::update(config, client, quiet, max_tries, dry)?
+                    } else if children.len() == 1 {
+                        println!(
+                            "There's still a game instance running, can't \
+                             update now!\n(Pass in -y or --dry-update if you \
+                             just want to check for updates.)",
+                        );
+                    } else {
+                        println!(
+                            "There are still {} game instances running, \
+                             can't update now!\n(Pass in -y or --dry-update \
+                             if you just want to check for updates.)",
+                            children.len(),
+                        );
+                    }
                 }
             },
             Some("login") | Some("play") | Some("launch") => {
