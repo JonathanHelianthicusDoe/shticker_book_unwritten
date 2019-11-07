@@ -9,31 +9,23 @@
 
 A minimal [CLI](https://en.wikipedia.org/wiki/Command-line_interface) launcher
 for the [Toontown Rewritten](https://www.toontownrewritten.com/)
-[MMORPG](https://en.wikipedia.org/wiki/Massively_multiplayer_online_role-playing_game).
-Inspired by [Shticker Book
+[MMORPG][mmorpg]. Inspired by [Shticker Book
 Rewritten](https://github.com/madsciencecoder/Shticker-Book-Rewritten).
 
 Currently builds and functions on GNU/Linux, Windows NT (using the MSVC
-toolchain), and macOS (be sure to allow terminal the ability to monitor
+toolchain), and macOS (be sure to allow Terminal the ability to monitor
 inputs).
 
 ## Installing
 
 ### From pre-compiled binary
 
-You can get pre-compiled binaries from [the releases
-page](https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten/releases)
-on GitHub.
+You can get pre-compiled binaries from [the releases page][releases] on GitHub.
 
 ### From [crates.io](https://crates.io/)
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
-can get from [rustup](https://rustup.rs/). Although shticker\_book\_unwritten
-does not make use of `async`/`await` itself, it depends on
-[reqwest](https://github.com/seanmonstar/reqwest), which requires this language
-feature on its latest releases: as such, shticker\_book\_unwritten will only
-compile on beta and nightly rustc, at least until `async`/`await` is
-stabilized.
+can get from [rustup](https://rustup.rs/).
 
 ```bash
 cargo install shticker_book_unwritten
@@ -49,12 +41,7 @@ cargo install -f shticker_book_unwritten
 ### From GitHub git repository
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
-can get from [rustup](https://rustup.rs/). Although shticker\_book\_unwritten
-does not make use of `async`/`await` itself, it depends on
-[reqwest](https://github.com/seanmonstar/reqwest), which requires this language
-feature on its latest releases: as such, shticker\_book\_unwritten will only
-compile on beta and nightly rustc, at least until `async`/`await` is
-stabilized.
+can get from [rustup](https://rustup.rs/).
 
 ```bash
 git clone https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten.git
@@ -82,14 +69,12 @@ guarantee](https://en.wikipedia.org/wiki/Rice%27s_theorem) that a program is
 inputs](https://en.wikipedia.org/wiki/Partial_function#Total_function).
 
 If you find a way to make shticker\_book\_unwritten panic, **that is considered
-a bug**, and you should [file an issue against the GitHub
-repository](https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten/issues)
-and/or [submit a pull
-request](https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten/pulls)
-to fix it. Additionally, undefined behavior is (obviously) also a bug, so
-similar steps should be taken if you find UB, but that will necessarily require
-using external libraries in a different way due to them being broken and/or
-fixing those external libraries upstream.
+a bug**, and you should [file an issue against the GitHub repository][issues]
+and/or [submit a pull request][pulls] to fix it. Additionally, undefined
+behavior is (obviously) also a bug, so similar steps should be taken if you
+find UB, but that will necessarily require using external libraries in a
+different way due to them being broken and/or fixing those external libraries
+upstream.
 
 ## Legal
 
@@ -99,7 +84,8 @@ version 3](https://www.gnu.org/licenses/agpl-3.0.en.html) (or any higher
 version, at your option). For the relevant legal text, see the
 [LICENSE](./LICENSE) file.
 
-[![GNU AGPL v3+](https://www.gnu.org/graphics/agplv3-with-text-162x68.png "GNU AGPL v3+")](https://www.gnu.org/licenses/agpl-3.0.en.html)
+[![GNU AGPL v3+](https://www.gnu.org/graphics/agplv3-with-text-162x68.png
+"GNU AGPL v3+")](https://www.gnu.org/licenses/agpl-3.0.en.html)
 
 This work contains ([Rust](https://www.rust-lang.org/)-ified) code from [bsdiff
 4.3](http://www.daemonology.net/bsdiff/), which is licensed under a slightly
@@ -111,7 +97,14 @@ The shticker\_book\_unwritten logo is licensed to anyone under the terms of the
 [Creative Commons Attribution-ShareAlike license, version
 4.0](https://creativecommons.org/licenses/by-sa/4.0/) (or any higher version,
 at your option). For the relevant legal text, see
-[https://creativecommons.org/licenses/by-sa/4.0/legalcode](https://creativecommons.org/licenses/by-sa/4.0/legalcode),
-or the [img/LICENSE.imgs](img/LICENSE.imgs) file for a plaintext version.
+[https://creativecommons.org/licenses/by-sa/4.0/legalcode][cc-by-sa], or the
+[img/LICENSE.imgs](img/LICENSE.imgs) file for a plaintext version.
 
-[![CC BY-SA 4.0+](https://i.creativecommons.org/l/by-sa/4.0/88x31.png "CC BY-SA 4.0+")](https://creativecommons.org/licenses/by-sa/4.0/)
+[![CC BY-SA 4.0+](https://i.creativecommons.org/l/by-sa/4.0/88x31.png
+"CC BY-SA 4.0+")](https://creativecommons.org/licenses/by-sa/4.0/)
+
+[mmorpg]: https://en.wikipedia.org/wiki/Massively_multiplayer_online_role-playing_game
+[releases]: https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten/releases
+[issues]: https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten/issues
+[pulls]: https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten/pulls
+[cc-by-sa]: https://creativecommons.org/licenses/by-sa/4.0/legalcode
