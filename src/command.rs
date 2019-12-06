@@ -12,19 +12,19 @@ use std::{
 const HELP_TEXT: &str = "\
 Commands
 ========
-  help, ?                          Display this help text.
-  about                            Display info about this program.
-  quit, exit                       Quit this program.
-  update, up                       Update the game files. Specify -y or
-    [-y | --dry-update]              --dry-update to only check if updates are
-                                     available.
-  login, play, launch              Launch TTR. Specify -n or --no-save to not
-    [username] [-n | --no-save]      save this login, even if it's successful.
-  instances, running               List currently running TTR instances.
-  kill, close <instance>           Forcibly close a running TTR instance. The
-                                     instance is specified by its PID or by
-                                     its username.
-  accounts, logins                 List all saved accounts/logins.
+  help, ?                    Display this help text.
+  about                      Display info about this program.
+  quit, exit                 Quit this program.
+  update, up                 Update the game files. Specify -y or --dry-update
+    [-y | --dry-update]        to only check if updates are available.
+  login, play, launch        Launch TTR. Specify -n or --no-save to not save
+    [usernames...]             logins, even if successful.
+    [-n | --no-save]
+  instances, running         List currently running TTR instances.
+  kill, close <instance>     Forcibly close a running TTR instance. The
+                               instance is specified by its PID or by its
+                               username.
+  accounts, logins           List all saved accounts/logins.
 ";
 const ABOUT_TEXT: &str = concat!(
     crate_name!(),
@@ -46,28 +46,19 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
 ) -> Result<(), Error> {
     let mut children = Vec::new();
     if let Some(usernames) = maybe_usernames {
-        for username in usernames {
-            if let Some(c) = login::login(
-                config,
-                &config_path,
-                client,
-                quiet,
-                [username].iter().copied(),
-            )? {
-                if !detach {
-                    children.push(c);
-                }
-
-                if !quiet {
-                    println!("Game launched successfully!");
-                }
-            }
-        }
+        login::login(
+            config,
+            &config_path,
+            client,
+            quiet,
+            usernames,
+            &mut children,
+        )?;
 
         if !detach && !quiet {
             println!();
         }
-    };
+    }
 
     if detach {
         return Ok(());
@@ -184,15 +175,14 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                 }
             },
             Some("login") | Some("play") | Some("launch") => {
-                if let Some(c) =
-                    login::login(config, &config_path, client, quiet, argv)?
-                {
-                    children.push(c);
-
-                    if !quiet {
-                        println!("Game launched successfully!");
-                    }
-                }
+                login::login(
+                    config,
+                    &config_path,
+                    client,
+                    quiet,
+                    argv,
+                    &mut children,
+                )?;
                 check_children(quiet, &mut children)?;
             },
             Some("instances") | Some("running") => {

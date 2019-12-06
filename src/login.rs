@@ -24,44 +24,62 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
     client: &rb::Client,
     quiet: bool,
     argv: A,
-) -> Result<Option<(String, process::Child, Instant)>, Error> {
-    let (mut maybe_username, mut nosave) = (None, false);
+    children: &mut Vec<(String, process::Child, Instant)>,
+) -> Result<(), Error> {
+    let (mut usernames, mut no_save) = (Vec::new(), false);
     for arg in argv {
         match arg {
-            "-n" | "--no-save" => nosave = true,
-            _ =>
-                if maybe_username.is_some() {
-                    println!("Unexpected argument: {}", arg);
-
-                    return Ok(None);
-                } else {
-                    maybe_username = Some(arg);
-                },
+            "-n" | "--no-save" => no_save = true,
+            _ => usernames.push(arg),
         }
     }
 
-    let (mut username_buf, mut password_buf) = (String::new(), String::new());
+    let mut username_buf = String::new();
 
-    let (username, password) = if let Some(username) = maybe_username {
-        if let Some(password) = config.accounts.get(username).and_then(|val| {
-            if let serde_json::Value::String(p) = val {
-                if !quiet {
-                    println!("Using saved password...");
-                }
+    if !usernames.is_empty() {
+        for username in usernames {
+            if let Some(password) = config
+                .accounts
+                .get(username)
+                .and_then(|val| {
+                    if let serde_json::Value::String(p) = val {
+                        if !quiet {
+                            println!("Using saved password...");
+                        }
 
-                Some(p)
+                        Some(p)
+                    } else {
+                        None
+                    }
+                })
+                .cloned()
+            {
+                handle_name_and_pw(
+                    config,
+                    config_path.as_ref(),
+                    client,
+                    quiet,
+                    no_save,
+                    username.to_owned(),
+                    password,
+                )?
+                .map(|c| children.push(c));
             } else {
-                None
-            }
-        }) {
-            (username, password.as_str())
-        } else {
-            print!("Password for {}: ", username);
-            io::stdout().flush().map_err(Error::StdoutError)?;
-            password_buf = rpassword::read_password_from_tty(None)
-                .map_err(Error::PasswordReadError)?;
+                print!("Password for {}: ", username);
+                io::stdout().flush().map_err(Error::StdoutError)?;
 
-            (username, password_buf.as_str())
+                handle_name_and_pw(
+                    config,
+                    config_path.as_ref(),
+                    client,
+                    quiet,
+                    no_save,
+                    username.to_owned(),
+                    rpassword::read_password_from_tty(None)
+                        .map_err(Error::PasswordReadError)?,
+                )?
+                .map(|c| children.push(c));
+            }
         }
     } else {
         print!("Username: ");
@@ -84,39 +102,48 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
                     None
                 }
             }) {
-            password.as_str()
+            password.clone()
         } else {
             print!("Password for {}: ", username_buf);
             io::stdout().flush().map_err(Error::StdoutError)?;
-            password_buf = rpassword::read_password_from_tty(None)
-                .map_err(Error::PasswordReadError)?;
 
-            password_buf.as_str()
+            rpassword::read_password_from_tty(None)
+                .map_err(Error::PasswordReadError)?
         };
 
-        (username_buf.as_str(), password)
-    };
+        handle_name_and_pw(
+            config,
+            config_path,
+            client,
+            quiet,
+            no_save,
+            username_buf,
+            password,
+        )?
+        .map(|c| children.push(c));
+    }
 
+    Ok(())
+}
+
+fn handle_name_and_pw<P: AsRef<Path>>(
+    config: &mut Config,
+    config_path: P,
+    client: &rb::Client,
+    quiet: bool,
+    no_save: bool,
+    username: String,
+    password: String,
+) -> Result<Option<(String, process::Child, Instant)>, Error> {
     let mut params = BTreeMap::new();
-    params.insert("username", username);
-    params.insert("password", password);
+    params.insert("username", username.as_str());
+    params.insert("password", password.as_str());
     if let Some(response_json) = handle_login_negotiation(
         client,
         quiet,
         post_to_login_api(client, &params)?,
     )? {
-        let username = if username_buf.is_empty() {
-            username.to_owned()
-        } else {
-            username_buf
-        };
-        if !nosave {
-            let password = if password_buf.is_empty() {
-                password.to_owned()
-            } else {
-                password_buf
-            };
-
+        if !no_save {
             let old_acc = config.add_account(username.clone(), password);
             commit_config(config, config_path)?;
             if !quiet && old_acc.is_none() {
@@ -149,8 +176,13 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
                 "Expected \"gameserver\" key with String value",
             ))?;
 
-        launch(config, quiet, play_cookie, game_server)
-            .map(|c| Some((username, c, Instant::now())))
+        let ret = launch(config, quiet, play_cookie, game_server)
+            .map(|c| Some((username, c, Instant::now())));
+        if !quiet && ret.is_ok() {
+            println!("Game launched successfully!");
+        }
+
+        ret
     } else {
         Ok(None)
     }
