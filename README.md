@@ -1,7 +1,7 @@
 # shticker\_book\_unwritten
 
 [![crates.io](https://img.shields.io/crates/v/shticker_book_unwritten)](https://crates.io/crates/shticker_book_unwritten)
-[![AGPL v3+](https://img.shields.io/badge/license-GNU%20AGPL%20v3%2B-663366)](./LICENSE)
+[![GPL v3+](https://img.shields.io/badge/license-GNU%20GPL%20v3%2B-bd0000)](./LICENSE)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
 [![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/JonathanHelianthicusDoe/shticker_book_unwritten)](https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten)
 
@@ -79,13 +79,12 @@ upstream.
 ## Legal
 
 This entire work (including this document &amp; all associated source code) is
-licensed to anyone under the terms of the [GNU Affero General Public License,
-version 3](https://www.gnu.org/licenses/agpl-3.0.en.html) (or any higher
-version, at your option). For the relevant legal text, see the
-[LICENSE](./LICENSE) file.
+licensed to anyone under the terms of the [GNU General Public License, version
+3](https://www.gnu.org/licenses/gpl-3.0.html) (or any higher version, at your
+option). For the relevant legal text, see the [LICENSE](./LICENSE) file.
 
-[![GNU AGPL v3+](https://www.gnu.org/graphics/agplv3-with-text-162x68.png
-"GNU AGPL v3+")](https://www.gnu.org/licenses/agpl-3.0.en.html)
+[![GNU GPL v3+](https://www.gnu.org/graphics/gplv3-or-later.png
+"GNU GPL v3+")](https://www.gnu.org/licenses/gpl-3.0.html)
 
 This work contains ([Rust](https://www.rust-lang.org/)-ified) code from [bsdiff
 4.3](http://www.daemonology.net/bsdiff/), which is licensed under a slightly
@@ -103,8 +102,15 @@ at your option). For the relevant legal text, see
 [![CC BY-SA 4.0+](https://i.creativecommons.org/l/by-sa/4.0/88x31.png
 "CC BY-SA 4.0+")](https://creativecommons.org/licenses/by-sa/4.0/)
 
+shticker\_book\_unwritten uses [cargo-deny][cargo-deny] to enforce
+[free](https://en.wikipedia.org/wiki/Free_software)ness of licenses, and
+license compatibility with all transitive dependencies. The configuration for
+this is in the [deny.toml](./deny.toml) file. You can replicate the check
+yourself with `cargo deny check all`.
+
 [mmorpg]: https://en.wikipedia.org/wiki/Massively_multiplayer_online_role-playing_game
 [releases]: https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten/releases
 [issues]: https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten/issues
 [pulls]: https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten/pulls
 [cc-by-sa]: https://creativecommons.org/licenses/by-sa/4.0/legalcode
+[cargo-deny]: https://github.com/EmbarkStudios/cargo-deny

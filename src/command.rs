@@ -30,7 +30,7 @@ const ABOUT_TEXT: &str = concat!(
     crate_name!(),
     " v",
     crate_version!(),
-    "\nLicensed under the GNU AGPL v3+. Source available at\n<",
+    "\nLicensed under the GNU GPL v3+. Source available at\n<",
     env!("CARGO_PKG_REPOSITORY"),
     ">\n",
 );

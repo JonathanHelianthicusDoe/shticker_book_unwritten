@@ -9,7 +9,7 @@ https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten"""
 readme = "README.md"
 keywords = ["cli", "launcher", "ttr", "toontown", "rewritten"]
 categories = ["games"]
-license = "AGPL-3.0-or-later"
+license = "GPL-3.0-or-later"
 
 [dependencies]
 bzip2 = "0.3.3"
