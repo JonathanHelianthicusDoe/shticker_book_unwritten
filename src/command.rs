@@ -5,8 +5,7 @@ use std::{
     io::{self, prelude::*},
     num::NonZeroUsize,
     path::Path,
-    process,
-    time,
+    process, time,
 };
 
 const HELP_TEXT: &str = "\
@@ -95,11 +94,11 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
             Some("help") | Some("?") => {
                 help();
                 check_children(quiet, &mut children)?;
-            },
+            }
             Some("about") => {
                 about();
                 check_children(quiet, &mut children)?;
-            },
+            }
             Some("quit") | Some("exit") => {
                 check_children(quiet, &mut children)?;
                 if children.is_empty() {
@@ -137,7 +136,7 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                         .read_line(&mut command_buf)
                         .map_err(Error::StdinError)?;
                 }
-            },
+            }
             Some("update") | Some("up") => {
                 check_children(quiet, &mut children)?;
 
@@ -149,7 +148,7 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                             println!("Unexpected argument: {}", arg);
 
                             continue 'outer;
-                        },
+                        }
                     }
                 }
 
@@ -173,7 +172,7 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                         );
                     }
                 }
-            },
+            }
             Some("login") | Some("play") | Some("launch") => {
                 login::login(
                     config,
@@ -184,26 +183,26 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                     &mut children,
                 )?;
                 check_children(quiet, &mut children)?;
-            },
+            }
             Some("instances") | Some("running") => {
                 check_children(quiet, &mut children)?;
                 display_instances(&children);
-            },
+            }
             Some("kill") | Some("close") => {
                 check_children(quiet, &mut children)?;
                 kill_instance(quiet, &mut children, argv.next())?;
-            },
+            }
             Some("accounts") | Some("logins") => {
                 check_children(quiet, &mut children)?;
                 display_accounts(config, &children)?;
-            },
+            }
             _ => {
                 check_children(quiet, &mut children)?;
                 println!(
                     "Unrecognized command. Type help or ? to get a list of \
                      commands.",
                 );
-            },
+            }
         }
     }
 

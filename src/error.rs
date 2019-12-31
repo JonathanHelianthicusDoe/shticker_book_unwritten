@@ -63,38 +63,50 @@ impl fmt::Display for Error {
                                    environment variable is unset or empty";
 
                 f.write_str(MSG)
-            },
-            Self::BadConfigPath(bcp) =>
-                write!(f, "Bad config file path specified: {}", bcp.display()),
-            Self::MkdirError(path, ioe) =>
-                write!(f, "`mkdir -p {:?}` failed:\n\t{}", path, ioe),
-            Self::PermissionDenied(info, ioe) =>
-                write!(f, "Permission denied while {}:\n\t{}", info, ioe),
+            }
+            Self::BadConfigPath(bcp) => {
+                write!(f, "Bad config file path specified: {}", bcp.display())
+            }
+            Self::MkdirError(path, ioe) => {
+                write!(f, "`mkdir -p {:?}` failed:\n\t{}", path, ioe)
+            }
+            Self::PermissionDenied(info, ioe) => {
+                write!(f, "Permission denied while {}:\n\t{}", info, ioe)
+            }
             Self::StdoutError(ioe) => write!(f, "stdout error:\n\t{}", ioe),
             Self::StdinError(ioe) => write!(f, "stdin error:\n\t{}", ioe),
-            Self::UnknownIoError(info, ioe) =>
-                write!(f, "Unknown I/O error while {}:\n\t{}", info, ioe),
-            Self::SerializeError(se) =>
-                write!(f, "Failed to write JSON:\n\t{}", se),
-            Self::DeserializeError(de) =>
-                write!(f, "Failed to read JSON:\n\t{}", de),
-            Self::ManifestRequestError(mre) =>
-                write!(f, "Error requesting manifest:\n\t{}", mre),
+            Self::UnknownIoError(info, ioe) => {
+                write!(f, "Unknown I/O error while {}:\n\t{}", info, ioe)
+            }
+            Self::SerializeError(se) => {
+                write!(f, "Failed to write JSON:\n\t{}", se)
+            }
+            Self::DeserializeError(de) => {
+                write!(f, "Failed to read JSON:\n\t{}", de)
+            }
+            Self::ManifestRequestError(mre) => {
+                write!(f, "Error requesting manifest:\n\t{}", mre)
+            }
             Self::ManifestRequestStatusError(sc) => write!(
                 f,
                 "Bad status code after requesting manifest:\n\t{}",
                 sc,
             ),
-            Self::BadManifestFormat(s) =>
-                write!(f, "Bad manifest format:\n\t{}", s),
-            Self::FileReadError(path, ioe) =>
-                write!(f, "Failed to read from {:?}:\n\t{}", path, ioe),
-            Self::FileWriteError(path, ioe) =>
-                write!(f, "Failed to write to {:?}:\n\t{}", path, ioe),
-            Self::DownloadRequestError(dre) =>
-                write!(f, "Error requesting download: {}", dre),
-            Self::DownloadRequestStatusError(sc) =>
-                write!(f, "Bad status code after requesting download: {}", sc),
+            Self::BadManifestFormat(s) => {
+                write!(f, "Bad manifest format:\n\t{}", s)
+            }
+            Self::FileReadError(path, ioe) => {
+                write!(f, "Failed to read from {:?}:\n\t{}", path, ioe)
+            }
+            Self::FileWriteError(path, ioe) => {
+                write!(f, "Failed to write to {:?}:\n\t{}", path, ioe)
+            }
+            Self::DownloadRequestError(dre) => {
+                write!(f, "Error requesting download: {}", dre)
+            }
+            Self::DownloadRequestStatusError(sc) => {
+                write!(f, "Bad status code after requesting download: {}", sc)
+            }
             Self::CopyIntoFileError(path, cife) => write!(
                 f,
                 "Failure copying HTTP-downloaded data into {:?}:\n\t{}",
@@ -116,15 +128,19 @@ impl fmt::Display for Error {
                 "Error while seeking through file {:?}:\n\t{}",
                 path, ioe,
             ),
-            Self::PatchSanityCheckFail(i) =>
-                write!(f, "During patching, sanity check #{} failed", i),
-            Self::FileRenameError(from, to) =>
-                write!(f, "Error renaming file from {:?} to {:?}", from, to),
+            Self::PatchSanityCheckFail(i) => {
+                write!(f, "During patching, sanity check #{} failed", i)
+            }
+            Self::FileRenameError(from, to) => {
+                write!(f, "Error renaming file from {:?} to {:?}", from, to)
+            }
             Self::NotDir(path) => write!(f, "{:?} is not a directory", path),
-            Self::RemoveFileError(path, ioe) =>
-                write!(f, "Error removing file {:?}:\n\t{}", path, ioe),
-            Self::MissingFile(name) =>
-                write!(f, "Expected \"{}\" file to exist", name),
+            Self::RemoveFileError(path, ioe) => {
+                write!(f, "Error removing file {:?}:\n\t{}", path, ioe)
+            }
+            Self::MissingFile(name) => {
+                write!(f, "Expected \"{}\" file to exist", name)
+            }
             Self::PermissionsSetError(path, ioe) => write!(
                 f,
                 "Failure to set permissions on file {:?}:\n\t{}",
@@ -135,20 +151,27 @@ impl fmt::Display for Error {
                 "Expected the {} command line argument to be present",
                 a,
             ),
-            Self::PasswordReadError(ioe) =>
-                write!(f, "Error reading password:\n\t{}", ioe),
-            Self::HttpClientCreateError(hcce) =>
-                write!(f, "Error creating HTTP client:\n\t{}", hcce),
-            Self::PostError(pe) =>
-                write!(f, "Error sending HTTP POST:\n\t{}", pe),
-            Self::BadLoginResponse(blr) =>
-                write!(f, "Bad login response:\n\t{}", blr),
-            Self::UnexpectedSuccessValue(value) =>
-                write!(f, "Unexpected \"success\" value: {}", value),
-            Self::ThreadSpawnError(ioe) =>
-                write!(f, "Error spawning thread:\n\t{}", ioe),
-            Self::ThreadJoinError(ioe) =>
-                write!(f, "Error attempting to join thread:\n\t{}", ioe),
+            Self::PasswordReadError(ioe) => {
+                write!(f, "Error reading password:\n\t{}", ioe)
+            }
+            Self::HttpClientCreateError(hcce) => {
+                write!(f, "Error creating HTTP client:\n\t{}", hcce)
+            }
+            Self::PostError(pe) => {
+                write!(f, "Error sending HTTP POST:\n\t{}", pe)
+            }
+            Self::BadLoginResponse(blr) => {
+                write!(f, "Bad login response:\n\t{}", blr)
+            }
+            Self::UnexpectedSuccessValue(value) => {
+                write!(f, "Unexpected \"success\" value: {}", value)
+            }
+            Self::ThreadSpawnError(ioe) => {
+                write!(f, "Error spawning thread:\n\t{}", ioe)
+            }
+            Self::ThreadJoinError(ioe) => {
+                write!(f, "Error attempting to join thread:\n\t{}", ioe)
+            }
             Self::ProcessKillError(pid, ioe) => write!(
                 f,
                 "Error killing child process with pid {}:\n\t{}",
@@ -166,9 +189,10 @@ impl fmt::Display for Error {
                 }
 
                 Ok(())
-            },
-            Self::InvalidArgValue(param) =>
-                write!(f, "Invalid value for the argument of {}", param),
+            }
+            Self::InvalidArgValue(param) => {
+                write!(f, "Invalid value for the argument of {}", param)
+            }
         }
     }
 }

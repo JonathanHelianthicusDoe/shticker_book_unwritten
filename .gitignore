@@ -9,3 +9,4 @@ Cargo.lock
 
 # Stray things
 *.txt
+build.sh

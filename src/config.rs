@@ -16,12 +16,12 @@ const DEFAULT_CDN_URI: &str =
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Config {
-    pub install_dir:     PathBuf,
-    pub cache_dir:       PathBuf,
-    pub manifest_uri:    String,
-    pub cdn_uri:         String,
+    pub install_dir: PathBuf,
+    pub cache_dir: PathBuf,
+    pub manifest_uri: String,
+    pub cdn_uri: String,
     pub store_passwords: bool,
-    pub accounts:        serde_json::Map<String, serde_json::Value>,
+    pub accounts: serde_json::Map<String, serde_json::Value>,
 }
 
 impl Config {
@@ -80,11 +80,12 @@ pub fn get_config(
                     match key.as_str() {
                         "XDG_CONFIG_HOME" => xdg_config_home = value,
                         "HOME" => home = value,
-                        _ =>
+                        _ => {
                             if !(home.is_empty() || xdg_config_home.is_empty())
                             {
                                 break;
-                            },
+                            }
+                        }
                     }
                 }
 
@@ -107,10 +108,11 @@ pub fn get_config(
                 for (key, value) in env::vars() {
                     match key.as_str() {
                         "APPDATA" => appdata = value,
-                        _ =>
+                        _ => {
                             if !appdata.is_empty() {
                                 break;
-                            },
+                            }
+                        }
                     }
                 }
 
@@ -129,10 +131,11 @@ pub fn get_config(
                 for (key, value) in env::vars() {
                     match key.as_str() {
                         "HOME" => home = value,
-                        _ =>
+                        _ => {
                             if !(home.is_empty()) {
                                 break;
-                            },
+                            }
+                        }
                     }
                 }
 
@@ -180,12 +183,13 @@ pub fn get_config(
                     .map_err(Error::SerializeError)?;
 
                     Ok((inject_arg_values(new_config), config_path))
-                },
-                io::ErrorKind::PermissionDenied =>
+                }
+                io::ErrorKind::PermissionDenied => {
                     Err(Error::PermissionDenied(
                         format!("opening {:?}", config_path),
                         ioe,
-                    )),
+                    ))
+                }
                 _ => Err(Error::UnknownIoError(
                     format!("opening {:?}", config_path),
                     ioe,
@@ -199,16 +203,16 @@ pub fn get_config(
 
         Ok((
             Config {
-                install_dir:     PathBuf::from(install_path.ok_or_else(
-                    || Error::MissingCommandLineArg("--install-dir"),
-                )?),
-                cache_dir:       PathBuf::from(cache_path.ok_or_else(
-                    || Error::MissingCommandLineArg("--cache-dir"),
-                )?),
-                manifest_uri:    DEFAULT_MANIFEST_URI.to_owned(),
-                cdn_uri:         DEFAULT_CDN_URI.to_owned(),
+                install_dir: PathBuf::from(install_path.ok_or_else(|| {
+                    Error::MissingCommandLineArg("--install-dir")
+                })?),
+                cache_dir: PathBuf::from(cache_path.ok_or_else(|| {
+                    Error::MissingCommandLineArg("--cache-dir")
+                })?),
+                manifest_uri: DEFAULT_MANIFEST_URI.to_owned(),
+                cdn_uri: DEFAULT_CDN_URI.to_owned(),
                 store_passwords: false,
-                accounts:        serde_json::Map::default(),
+                accounts: serde_json::Map::default(),
             },
             PathBuf::new(),
         ))
@@ -250,18 +254,18 @@ fn prompt_for_config_values<P: AsRef<Path>>(
             println!();
 
             return Ok(Config {
-                install_dir:     PathBuf::from(install_dir.trim()),
-                cache_dir:       config_path
+                install_dir: PathBuf::from(install_dir.trim()),
+                cache_dir: config_path
                     .as_ref()
                     .parent()
                     .ok_or_else(|| {
                         Error::BadConfigPath(config_path.as_ref().to_owned())
                     })?
                     .join("cache"),
-                manifest_uri:    DEFAULT_MANIFEST_URI.to_owned(),
-                cdn_uri:         DEFAULT_CDN_URI.to_owned(),
+                manifest_uri: DEFAULT_MANIFEST_URI.to_owned(),
+                cdn_uri: DEFAULT_CDN_URI.to_owned(),
                 store_passwords: yes_no_trimmed == "yes",
-                accounts:        serde_json::Map::default(),
+                accounts: serde_json::Map::default(),
             });
         }
 

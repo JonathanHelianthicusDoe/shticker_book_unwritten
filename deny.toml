@@ -11,7 +11,7 @@ deny = [
     "AFL-2.0",
     "AFL-2.1",
     "AFL-3.0",
-    "AGPL-1.0-only",
+    "AGPL-1.0",
     "Apache-1.0",
     "Apache-1.1",
     "APSL-1.0",

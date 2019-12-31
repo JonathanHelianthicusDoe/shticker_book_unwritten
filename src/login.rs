@@ -10,8 +10,7 @@ use std::{
     ffi::OsStr,
     io::{self, Write},
     path::Path,
-    process,
-    thread,
+    process, thread,
     time::{Duration, Instant},
 };
 
@@ -198,12 +197,13 @@ fn handle_login_negotiation(
             .get("success")
             .and_then(|val| match val {
                 serde_json::Value::String(s) => Some(s.as_str()),
-                serde_json::Value::Bool(b) =>
+                serde_json::Value::Bool(b) => {
                     if *b {
                         Some("true")
                     } else {
                         Some("false")
-                    },
+                    }
+                }
                 _ => None,
             })
             .ok_or(Error::BadLoginResponse(
@@ -217,16 +217,18 @@ fn handle_login_negotiation(
                 }
 
                 return Ok(Some(response_json));
-            },
-            "delayed" =>
-                response_json = enqueue(client, quiet, &response_json)?,
-            "partial" =>
+            }
+            "delayed" => {
+                response_json = enqueue(client, quiet, &response_json)?
+            }
+            "partial" => {
                 response_json =
                     if let Some(rj) = do_2fa(client, &response_json)? {
                         rj
                     } else {
                         return Ok(None);
-                    },
+                    }
+            }
             "false" => {
                 println!(
                     "Login failed: {}",
@@ -245,9 +247,10 @@ fn handle_login_negotiation(
                 );
 
                 return Ok(None);
-            },
-            _ =>
-                return Err(Error::UnexpectedSuccessValue(success.to_owned())),
+            }
+            _ => {
+                return Err(Error::UnexpectedSuccessValue(success.to_owned()))
+            }
         }
     }
 }

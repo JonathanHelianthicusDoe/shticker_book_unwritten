@@ -11,12 +11,7 @@ mod update;
 mod util;
 
 use clap::{
-    crate_authors,
-    crate_description,
-    crate_name,
-    crate_version,
-    App,
-    Arg,
+    crate_authors, crate_description, crate_name, crate_version, App, Arg,
 };
 use error::Error;
 use reqwest::blocking as rb;

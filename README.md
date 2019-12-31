@@ -3,6 +3,7 @@
 [![crates.io](https://img.shields.io/crates/v/shticker_book_unwritten)](https://crates.io/crates/shticker_book_unwritten)
 [![GPL v3+](https://img.shields.io/badge/license-GNU%20GPL%20v3%2B-bd0000)](./LICENSE)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
+[![minimum supported rust version 1.39.0](https://img.shields.io/badge/rustc-%3E%3D1.39.0-dea584)](https://rustup.rs/)
 [![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/JonathanHelianthicusDoe/shticker_book_unwritten)](https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten)
 
 ![shticker\_book\_unwritten logo](./img/shticker_book_unwritten_256x256.png)
@@ -16,6 +17,9 @@ Currently builds and functions on GNU/Linux, Windows NT (using the MSVC
 toolchain), and macOS (be sure to allow Terminal the ability to monitor
 inputs).
 
+**Mirror:**
+<https://codeberg.org/JonathanHelianthicusDoe/shticker_book_unwritten>
+
 ## Installing
 
 ### From pre-compiled binary
@@ -25,7 +29,8 @@ You can get pre-compiled binaries from [the releases page][releases] on GitHub.
 ### From [crates.io](https://crates.io/)
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
-can get from [rustup](https://rustup.rs/).
+can get from [rustup](https://rustup.rs/). The minimum supported version of
+rustc is 1.39.0.
 
 ```bash
 cargo install shticker_book_unwritten
@@ -41,7 +46,8 @@ cargo install -f shticker_book_unwritten
 ### From GitHub git repository
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
-can get from [rustup](https://rustup.rs/).
+can get from [rustup](https://rustup.rs/). The minimum supported version of
+rustc is 1.39.0.
 
 ```bash
 git clone https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten.git
@@ -80,11 +86,16 @@ upstream.
 
 This entire work (including this document &amp; all associated source code) is
 licensed to anyone under the terms of the [GNU General Public License, version
-3](https://www.gnu.org/licenses/gpl-3.0.html) (or any higher version, at your
-option). For the relevant legal text, see the [LICENSE](./LICENSE) file.
+3](https://www.gnu.org/licenses/gpl-3.0.html) (or any later version of the same
+license, at the licensee&rsquo;s option). For the relevant legal text, see the
+[LICENSE](./LICENSE) file.
 
 [![GNU GPL v3+](https://www.gnu.org/graphics/gplv3-or-later.png
 "GNU GPL v3+")](https://www.gnu.org/licenses/gpl-3.0.html)
+
+Versions of shticker\_book\_unwritten prior to 1.0.0 were licensed under the
+terms of the [GNU Affero General Public License, version
+3](https://www.gnu.org/licenses/agpl-3.0.html) or later.
 
 This work contains ([Rust](https://www.rust-lang.org/)-ified) code from [bsdiff
 4.3](http://www.daemonology.net/bsdiff/), which is licensed under a slightly
@@ -94,10 +105,10 @@ relevant legal text, see the [LICENSE.bsdiff4](./LICENSE.bsdiff4) file.
 
 The shticker\_book\_unwritten logo is licensed to anyone under the terms of the
 [Creative Commons Attribution-ShareAlike license, version
-4.0](https://creativecommons.org/licenses/by-sa/4.0/) (or any higher version,
-at your option). For the relevant legal text, see
-[https://creativecommons.org/licenses/by-sa/4.0/legalcode][cc-by-sa], or the
-[img/LICENSE.imgs](img/LICENSE.imgs) file for a plaintext version.
+4.0](https://creativecommons.org/licenses/by-sa/4.0/) (or any later version of
+the same license, at the licensee&rsquo;s option). For the relevant legal text,
+see [https://creativecommons.org/licenses/by-sa/4.0/legalcode][cc-by-sa], or
+the [img/LICENSE.imgs](img/LICENSE.imgs) file for a plaintext version.
 
 [![CC BY-SA 4.0+](https://i.creativecommons.org/l/by-sa/4.0/88x31.png
 "CC BY-SA 4.0+")](https://creativecommons.org/licenses/by-sa/4.0/)

@@ -34,10 +34,11 @@ pub fn update(
 
     let manifest_map = match get_manifest(config, client, quiet, max_tries)? {
         serde_json::Value::Object(m) => m,
-        _ =>
+        _ => {
             return Err(Error::BadManifestFormat(
                 "Top-level value is not an Object".to_owned(),
-            )),
+            ))
+        }
     };
 
     if !quiet {
@@ -67,25 +68,28 @@ pub fn update(
             Error::BadManifestFormat("Missing the \"only\" key".to_owned())
         })? {
             serde_json::Value::Array(v) => v,
-            _ =>
+            _ => {
                 return Err(Error::BadManifestFormat(
                     "Expected \"only\"'s value to be an Array".to_owned(),
-                )),
+                ))
+            }
         };
         let mut supported_by_this_arch = false;
         for arch_val in supported_archs {
             match arch_val {
-                serde_json::Value::String(s) =>
+                serde_json::Value::String(s) => {
                     if OS_AND_ARCH == s {
                         supported_by_this_arch = true;
 
                         break;
-                    },
-                _ =>
+                    }
+                }
+                _ => {
                     return Err(Error::BadManifestFormat(
                         "Expected OS & architecture values to be Strings"
                             .to_owned(),
-                    )),
+                    ))
+                }
             }
         }
 
@@ -149,8 +153,9 @@ pub fn update(
                             )
                         })
                         .and_then(|val| match val {
-                            serde_json::Value::String(s) =>
-                                sha_from_hash_str(s),
+                            serde_json::Value::String(s) => {
+                                sha_from_hash_str(s)
+                            }
                             _ => Err(Error::BadManifestFormat(
                                 "Expected \"compHash\" to be a String"
                                     .to_owned(),
@@ -164,8 +169,9 @@ pub fn update(
                             )
                         })
                         .and_then(|val| match val {
-                            serde_json::Value::String(s) =>
-                                sha_from_hash_str(s),
+                            serde_json::Value::String(s) => {
+                                sha_from_hash_str(s)
+                            }
                             _ => Err(Error::BadManifestFormat(
                                 "Expected \"hash\" to be a String".to_owned(),
                             )),
@@ -185,17 +191,19 @@ pub fn update(
                     )?;
 
                     None
-                },
-                io::ErrorKind::PermissionDenied =>
+                }
+                io::ErrorKind::PermissionDenied => {
                     return Err(Error::PermissionDenied(
                         format!("opening {:?}", install_dir),
                         ioe,
-                    )),
-                _ =>
+                    ))
+                }
+                _ => {
                     return Err(Error::UnknownIoError(
                         format!("opening {:?}", install_dir),
                         ioe,
-                    )),
+                    ))
+                }
             },
         };
         if let Some(f) = already_existing_file {
@@ -293,14 +301,16 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
 
     let manifest_sha = sha_from_hash_str(match file_map.get("hash") {
         Some(serde_json::Value::String(s)) => s,
-        Some(_) =>
+        Some(_) => {
             return Err(Error::BadManifestFormat(
                 "Value of \"hash\" was not a String".to_owned(),
-            )),
-        _ =>
+            ))
+        }
+        _ => {
             return Err(Error::BadManifestFormat(
                 "\"hash\" key missing".to_owned(),
-            )),
+            ))
+        }
     })?;
 
     if initial_sha == manifest_sha {
@@ -345,10 +355,11 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
 
         let patch_map = match patch_obj {
             serde_json::Value::Object(m) => m,
-            _ =>
+            _ => {
                 return Err(Error::BadManifestFormat(
                     "Expected \"patches\" to be objects".to_owned(),
-                )),
+                ))
+            }
         };
 
         let patch_file_name = patch_map
@@ -524,7 +535,7 @@ fn get_manifest(
                 handle_retry(e);
 
                 continue;
-            },
+            }
         };
         if !manifest_resp.status().is_success() {
             handle_retry(Error::ManifestRequestStatusError(
@@ -541,7 +552,7 @@ fn get_manifest(
                     handle_retry(e);
 
                     continue;
-                },
+                }
             };
 
         match serde_json::from_str(&manifest_text)
@@ -598,11 +609,12 @@ fn sha_from_hash_str<S: AsRef<str>>(hash_str: S) -> Result<[u8; 20], Error> {
             b'd' | b'D' => 0x0d,
             b'e' | b'E' => 0x0e,
             b'f' | b'F' => 0x0f,
-            _ =>
+            _ => {
                 return Err(Error::BadManifestFormat(format!(
                     "Unexpected character in SHA1 hash string: {:?}",
                     b as char,
-                ))),
+                )))
+            }
         };
 
         manifest_sha[i / 2] |= nibble_val << if i % 2 == 0 { 4 } else { 0 };
@@ -689,7 +701,7 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
                 handle_retry(e);
 
                 continue;
-            },
+            }
         };
         if !dl_resp.status().is_success() {
             handle_retry(Error::DownloadRequestStatusError(dl_resp.status()));
@@ -822,17 +834,19 @@ fn decompress_file<P: AsRef<Path>>(
 
 fn ensure_dir<P: AsRef<Path>>(path: P) -> Result<(), Error> {
     match fs::metadata(&path) {
-        Ok(md) =>
+        Ok(md) => {
             if md.is_dir() {
                 Ok(())
             } else {
                 Err(Error::NotDir(path.as_ref().to_path_buf()))
-            },
+            }
+        }
         Err(ioe) => match ioe.kind() {
-            io::ErrorKind::NotFound =>
+            io::ErrorKind::NotFound => {
                 fs::create_dir_all(&path).map_err(|ioe| {
                     Error::MkdirError(path.as_ref().to_path_buf(), ioe)
-                }),
+                })
+            }
             io::ErrorKind::PermissionDenied => Err(Error::PermissionDenied(
                 format!("obtaining metadata for {:?}", path.as_ref()),
                 ioe,
