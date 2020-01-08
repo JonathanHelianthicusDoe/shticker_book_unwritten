@@ -16,7 +16,7 @@ bzip2 = "0.3.3"
 rpassword = "4.0.3"
 serde = { version = "1.0.104", features = ["derive"] }
 serde_json = "1.0.44"
-sha-1 = "0.8.1"
+sha-1 = "0.8.2"
 
 [dependencies.clap]
 version = "2.33.0"
