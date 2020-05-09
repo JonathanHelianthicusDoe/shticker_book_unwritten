@@ -12,7 +12,7 @@ use std::{
 const DEFAULT_MANIFEST_URI: &str =
     "https://cdn.toontownrewritten.com/content/patchmanifest.txt";
 const DEFAULT_CDN_URI: &str =
-    "https://s3.amazonaws.com/download.toontownrewritten.com/patches/";
+    "https://download.toontownrewritten.com/patches/";
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Config {
