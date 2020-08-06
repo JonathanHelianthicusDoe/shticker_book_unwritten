@@ -3,7 +3,7 @@
 [![crates.io](https://img.shields.io/crates/v/shticker_book_unwritten)](https://crates.io/crates/shticker_book_unwritten)
 [![GPL v3+](https://img.shields.io/badge/license-GNU%20GPL%20v3%2B-bd0000)](./LICENSE)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
-[![minimum supported rust version 1.39.0](https://img.shields.io/badge/rustc-%3E%3D1.39.0-dea584)](https://rustup.rs/)
+[![minimum supported rust version 1.41.0](https://img.shields.io/badge/rustc-%3E%3D1.41.0-dea584)](https://rustup.rs/)
 [![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/JonathanHelianthicusDoe/shticker_book_unwritten)](https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten)
 
 ![shticker\_book\_unwritten logo](./img/shticker_book_unwritten_256x256.png)
@@ -30,7 +30,7 @@ You can get pre-compiled binaries from [the releases page][releases] on GitHub.
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
 can get from [rustup](https://rustup.rs/). The minimum supported version of
-rustc is 1.39.0.
+rustc is 1.41.0.
 
 ```bash
 cargo install shticker_book_unwritten
@@ -47,7 +47,7 @@ cargo install -f shticker_book_unwritten
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
 can get from [rustup](https://rustup.rs/). The minimum supported version of
-rustc is 1.39.0.
+rustc is 1.41.0.
 
 ```bash
 git clone https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten.git

@@ -574,10 +574,10 @@ fn sha_of_reader<R: Read>(
     let mut n = buf.len();
     while n == buf.len() {
         n = r.read(buf)?;
-        sha.input(&buf[..n]);
+        sha.update(&buf[..n]);
     }
 
-    Ok(sha.result().into())
+    Ok(sha.finalize().into())
 }
 
 fn sha_of_file_by_path<P: AsRef<Path>>(
@@ -592,10 +592,10 @@ fn sha_of_file_by_path<P: AsRef<Path>>(
         n = file.read(buf).map_err(|ioe| {
             Error::FileReadError(path.as_ref().to_path_buf(), ioe)
         })?;
-        sha.input(&buf[..n]);
+        sha.update(&buf[..n]);
     }
 
-    Ok(sha.result().into())
+    Ok(sha.finalize().into())
 }
 
 fn sha_from_hash_str<S: AsRef<str>>(hash_str: S) -> Result<[u8; 20], Error> {
