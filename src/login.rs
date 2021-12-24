@@ -397,11 +397,16 @@ fn launch<S: AsRef<OsStr>, T: AsRef<OsStr>>(
     let command_text = "./TTREngine";
     #[cfg(windows)]
     let command_text = {
+        #[cfg(target_arch = "x86")]
+        const EXE_NAME: &str = "TTREngine.exe";
+        #[cfg(target_arch = "x86_64")]
+        const EXE_NAME: &str = "TTREngine64.exe";
+
         // `.current_dir(&config.install_dir)` doesn't seem to work like it
-        // does on Linux, so this is just a (naive) way of making real sure
+        // does on Linux, so this is just a (naïve) way of making real sure
         // that we are pointing at the right executable.
         let mut command_buf = config.install_dir.clone();
-        command_buf.push("TTREngine.exe");
+        command_buf.push(EXE_NAME);
 
         command_buf
     };

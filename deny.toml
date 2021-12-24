@@ -51,3 +51,9 @@ deny = [
     "ZPL-2.0",
     "ZPL-2.1",
 ]
+
+[[licenses.clarify]]
+name = "encoding_rs"
+version = "*"
+expression = "(Apache-2.0 OR MIT) AND BSD-3-Clause"
+license-files = [{ path = "COPYRIGHT", hash = 0x39f8ad31 }]
