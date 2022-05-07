@@ -18,3 +18,8 @@ jobs:
     - uses: actions/checkout@v3
     - name: Build
       run: cargo build --verbose
+    - name: Archive code coverage results
+      uses: actions/upload-artifact@v3
+      with:
+          name: shticker_book_unwritten_win.exe
+          path: target/release/shticker_book_unwritten.exe
