@@ -1,5 +1,4 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::all)]
 #![deny(deprecated)]
 
 mod command;
@@ -11,7 +10,7 @@ mod update;
 mod util;
 
 use clap::{
-    crate_authors, crate_description, crate_name, crate_version, App, Arg,
+    crate_authors, crate_description, crate_name, crate_version, Arg, Command,
 };
 use error::Error;
 use reqwest::blocking as rb;
@@ -48,13 +47,13 @@ fn run() -> Result<(), Error> {
         "/config.json",
     );
 
-    let arg_matches = App::new(crate_name!())
+    let arg_matches = Command::new(crate_name!())
         .version(crate_version!())
         .author(crate_authors!())
         .about(crate_description!())
         .arg(
-            Arg::with_name("config")
-                .short("c")
+            Arg::new("config")
+                .short('c')
                 .long("config")
                 .aliases(&["conf", "configuration"])
                 .value_name("CONFIG_FILE")
@@ -64,17 +63,17 @@ fn run() -> Result<(), Error> {
                 .conflicts_with("no-config"),
         )
         .arg(
-            Arg::with_name("no-config")
+            Arg::new("no-config")
                 .long("no-config")
                 .aliases(&["no-conf", "no-configuration"])
-                .help("Don't read or write any config files.")
+                .help("Don't read nor write any config files.")
                 .takes_value(false)
                 .requires_all(&["install-dir", "cache-dir"])
                 .conflicts_with("config"),
         )
         .arg(
-            Arg::with_name("install-dir")
-                .short("i")
+            Arg::new("install-dir")
+                .short('i')
                 .long("install-dir")
                 .value_name("INSTALL_DIR")
                 .help("Directory of TTR installation.")
@@ -88,8 +87,8 @@ fn run() -> Result<(), Error> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("cache-dir")
-                .short("a")
+            Arg::new("cache-dir")
+                .short('a')
                 .long("cache-dir")
                 .value_name("CACHE_DIR")
                 .help("Directory for caching game file downloads.")
@@ -98,49 +97,53 @@ fn run() -> Result<(), Error> {
                      be created if it doesn't already exist. Overrides the \
                      value found in the config (if any), but will not be \
                      written to the config. The default cache directory is \
-                     named \"cache\" and is in the same directory as the \
+                     named \"cache/\" and is in the same directory as the \
                      config file. Usually you won't need this option.",
                 )
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("no-auto-update")
-                .short("n")
+            Arg::new("no-auto-update")
+                .short('n')
                 .long("no-auto-update")
                 .help("Suppress auto-update behavior.")
                 .long_help(
                     "Suppresses auto-updating, although you can still decide \
-                     to update via the \"update\"/\"up\" command.",
+                     to update via the `update`/`up` command.",
                 )
                 .takes_value(false),
         )
         .arg(
-            Arg::with_name("username")
-                .short("u")
+            Arg::new("username")
+                .short('u')
                 .long("username")
-                .help("Username(s) to immediately login with.")
+                .help(
+                    "Username to immediately login with. This option may be \
+                     supplied zero or more times.",
+                )
                 .long_help(
                     "If this option is supplied, then after (possibly) \
-                     auto-updating, the game will be launched with these \
-                     username(s). The password(s) will be prompted for as \
-                     normal if they aren't saved. Then, if the login(s) \
-                     succeed, command mode is entered (assuming -d is not \
-                     supplied).",
+                     auto-updating, the game will be launched with this \
+                     username. To login with multiple accounts, specify this \
+                     option more than once. The corresponding password(s) \
+                     will be prompted for as normal if they aren't saved. \
+                     Then, if the login(s) succeed, command mode is entered \
+                     (assuming `-d` is not supplied).",
                 )
                 .takes_value(true)
-                .multiple(true),
+                .multiple_occurrences(true),
         )
         .arg(
-            Arg::with_name("detach")
-                .short("d")
+            Arg::new("detach")
+                .short('d')
                 .long("detach")
                 .help(
-                    "Exit after auto-updating (and possibly launching, if -u \
-                     is supplied).",
+                    "Exit after auto-updating (and possibly launching, if \
+                     `-u` is supplied).",
                 )
                 .long_help(
-                    "After auto-updating (unless -n was supplied), and after \
-                     launching the game (if -u was supplied), \
+                    "After auto-updating (unless `-n` was supplied), and \
+                     after launching the game (if `-u` was supplied), \
                      shticker_book_unwritten will simply exit. If the game \
                      was launched, then its process is thus orphaned. On \
                      POSIX, an orphan continues running normally and is \
@@ -150,8 +153,8 @@ fn run() -> Result<(), Error> {
                 .takes_value(false),
         )
         .arg(
-            Arg::with_name("quiet")
-                .short("q")
+            Arg::new("quiet")
+                .short('q')
                 .long("quiet")
                 .help(
                     "Don't output anything unless necessary or explicitly \
@@ -160,8 +163,8 @@ fn run() -> Result<(), Error> {
                 .takes_value(false),
         )
         .arg(
-            Arg::with_name("tries")
-                .short("t")
+            Arg::new("tries")
+                .short('t')
                 .long("tries")
                 .help(
                     "Positive integer number of times to try doing things \
@@ -176,8 +179,8 @@ fn run() -> Result<(), Error> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("dry-update")
-                .short("y")
+            Arg::new("dry-update")
+                .short('y')
                 .long("dry-update")
                 .help(
                     "When auto-updating, only check if updates are available.",

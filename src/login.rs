@@ -74,7 +74,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
                     quiet,
                     no_save,
                     username.to_owned(),
-                    rpassword::read_password_from_tty(None)
+                    rpassword::read_password()
                         .map_err(Error::PasswordReadError)?,
                 )?
                 .map(|c| children.push(c));
@@ -106,8 +106,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
             print!("Password for {}: ", username_buf);
             io::stdout().flush().map_err(Error::StdoutError)?;
 
-            rpassword::read_password_from_tty(None)
-                .map_err(Error::PasswordReadError)?
+            rpassword::read_password().map_err(Error::PasswordReadError)?
         };
 
         handle_name_and_pw(
