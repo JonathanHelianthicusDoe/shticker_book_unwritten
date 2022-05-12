@@ -131,7 +131,8 @@ fn run() -> Result<(), Error> {
                      (assuming `-d` is not supplied).",
                 )
                 .takes_value(true)
-                .multiple_occurrences(true),
+                .multiple_occurrences(true)
+                .multiple_values(true),
         )
         .arg(
             Arg::new("detach")
