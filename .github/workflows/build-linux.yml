@@ -1,0 +1,31 @@
+
+  
+name: Building Linux Release Build
+on: [push,pull]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --release
+    - name: Archive code coverage results
+      uses: actions/upload-artifact@v3
+      with:
+          name: shticker_book_unwritten
+          path: target/release/shticker_book_unwritten
+    - name: Release The Build
+      uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: false
+          title: "Linux Release Build"
+          files: |
+            target/release/shticker_book_unwritten
+    
