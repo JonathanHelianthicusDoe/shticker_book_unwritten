@@ -29,5 +29,5 @@ jobs:
           prerelease: false
           title: "Linux Release Build"
           files: |
-            /target/release/shticker_book_unwritten
+           /target/release/shticker_book_unwritten
     
