@@ -20,7 +20,7 @@ jobs:
      #     name: shticker_book_unwritten
       #    path: target/release/shticker_book_unwritten
     - name: test
-      run: cd  /target/release/ && ls
+      run: find . -name shticker_book_unwritten
     - name: Release The Build
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
