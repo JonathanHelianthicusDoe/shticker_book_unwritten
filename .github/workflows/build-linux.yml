@@ -19,6 +19,8 @@ jobs:
     #  with:
      #     name: shticker_book_unwritten
       #    path: target/release/shticker_book_unwritten
+    - name: test
+      run: cd  /target/release/ && ls
     - name: Release The Build
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
@@ -27,5 +29,5 @@ jobs:
           prerelease: false
           title: "Linux Release Build"
           files: |
-            target/release/shticker_book_unwritten
+            /target/release/shticker_book_unwritten
     
