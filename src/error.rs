@@ -43,7 +43,6 @@ pub enum Error {
     ThreadJoinError(io::Error),
     ProcessKillError(u32, io::Error),
     HashMismatch(PathBuf, [u8; 20]),
-    InvalidArgValue(&'static str),
 }
 
 impl fmt::Display for Error {
@@ -190,9 +189,6 @@ impl fmt::Display for Error {
 
                 Ok(())
             }
-            Self::InvalidArgValue(param) => {
-                write!(f, "Invalid value for the argument of {}", param)
-            }
         }
     }
 }
@@ -239,7 +235,6 @@ impl Error {
             Self::ThreadJoinError(_) => 35,
             Self::ProcessKillError(_, _) => 36,
             Self::HashMismatch(_, _) => 37,
-            Self::InvalidArgValue(_) => 38,
         }
     }
 }

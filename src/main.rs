@@ -10,7 +10,8 @@ mod update;
 mod util;
 
 use clap::{
-    crate_authors, crate_description, crate_name, crate_version, Arg, Command,
+    builder::ValueParser, crate_authors, crate_description, crate_name,
+    crate_version, value_parser, Arg, ArgAction, Command,
 };
 use error::Error;
 use reqwest::blocking as rb;
@@ -60,6 +61,7 @@ fn run() -> Result<(), Error> {
                 .help("Configuration JSON file to use.")
                 .long_help(CONFIG_LONG_HELP)
                 .takes_value(true)
+                .value_parser(ValueParser::path_buf())
                 .conflicts_with("no-config"),
         )
         .arg(
@@ -84,7 +86,8 @@ fn run() -> Result<(), Error> {
                      will not be written to the config. Usually you won't \
                      need this option.",
                 )
-                .takes_value(true),
+                .takes_value(true)
+                .value_parser(ValueParser::path_buf()),
         )
         .arg(
             Arg::new("cache-dir")
@@ -100,7 +103,8 @@ fn run() -> Result<(), Error> {
                      named \"cache/\" and is in the same directory as the \
                      config file. Usually you won't need this option.",
                 )
-                .takes_value(true),
+                .takes_value(true)
+                .value_parser(ValueParser::path_buf()),
         )
         .arg(
             Arg::new("no-auto-update")
@@ -131,7 +135,7 @@ fn run() -> Result<(), Error> {
                      (assuming `-d` is not supplied).",
                 )
                 .takes_value(true)
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .multiple_values(true),
         )
         .arg(
@@ -177,7 +181,8 @@ fn run() -> Result<(), Error> {
                      5. Currently works for downloading files, including the \
                      manifest.",
                 )
-                .takes_value(true),
+                .takes_value(true)
+                .value_parser(value_parser!(NonZeroUsize)),
         )
         .arg(
             Arg::new("dry-update")
@@ -196,20 +201,19 @@ fn run() -> Result<(), Error> {
         )
         .get_matches();
 
-    let quiet = arg_matches.is_present("quiet");
-    let max_tries = if let Some(tries_str) = arg_matches.value_of("tries") {
-        tries_str
-            .parse()
-            .map_err(|_| Error::InvalidArgValue("--tries/-t"))?
-    } else {
-        NonZeroUsize::new(5).unwrap()
-    };
+    let quiet = arg_matches.contains_id("quiet");
+    let max_tries =
+        if let Some(tries) = arg_matches.get_one::<NonZeroUsize>("tries") {
+            *tries
+        } else {
+            NonZeroUsize::new(5).unwrap()
+        };
 
     let (mut config, config_path) = config::get_config(
-        arg_matches.is_present("no-config"),
-        arg_matches.value_of("config"),
-        arg_matches.value_of("install-dir"),
-        arg_matches.value_of("cache-dir"),
+        arg_matches.contains_id("no-config"),
+        arg_matches.get_one("config").cloned(),
+        arg_matches.get_one("install-dir").cloned(),
+        arg_matches.get_one("cache-dir").cloned(),
         quiet,
     )?;
 
@@ -217,13 +221,13 @@ fn run() -> Result<(), Error> {
         .build()
         .map_err(Error::HttpClientCreateError)?;
 
-    if !arg_matches.is_present("no-auto-update") {
+    if !arg_matches.contains_id("no-auto-update") {
         update::update(
             &config,
             &client,
             quiet,
             max_tries,
-            arg_matches.is_present("dry-update"),
+            arg_matches.contains_id("dry-update"),
         )?;
 
         if !quiet {
@@ -236,8 +240,10 @@ fn run() -> Result<(), Error> {
         &config_path,
         &client,
         quiet,
-        arg_matches.values_of("username"),
-        arg_matches.is_present("detach"),
+        arg_matches
+            .get_many::<String>("username")
+            .map(|it| it.map(|v| v.as_str())),
+        arg_matches.contains_id("detach"),
         max_tries,
     )
 }

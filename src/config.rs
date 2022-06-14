@@ -42,26 +42,23 @@ impl Config {
 
 pub fn get_config(
     no_config: bool,
-    config_path: Option<&str>,
-    install_path: Option<&str>,
-    cache_path: Option<&str>,
+    config_path: Option<PathBuf>,
+    install_path: Option<PathBuf>,
+    cache_path: Option<PathBuf>,
     quiet: bool,
 ) -> Result<(Config, PathBuf), Error> {
     let inject_arg_values = |c| {
-        let c = if let Some(ip) = install_path {
+        let c = if let Some(ip) = install_path.clone() {
             Config {
-                install_dir: PathBuf::from(ip),
+                install_dir: ip,
                 ..c
             }
         } else {
             c
         };
 
-        if let Some(cp) = cache_path {
-            Config {
-                cache_dir: PathBuf::from(cp),
-                ..c
-            }
+        if let Some(cp) = cache_path.clone() {
+            Config { cache_dir: cp, ..c }
         } else {
             c
         }
@@ -69,7 +66,7 @@ pub fn get_config(
 
     if !no_config {
         let config_path = if let Some(s) = config_path {
-            PathBuf::from(s)
+            s
         } else {
             #[cfg(target_os = "linux")]
             {
@@ -203,12 +200,12 @@ pub fn get_config(
 
         Ok((
             Config {
-                install_dir: PathBuf::from(install_path.ok_or_else(|| {
+                install_dir: install_path.ok_or_else(|| {
                     Error::MissingCommandLineArg("--install-dir")
-                })?),
-                cache_dir: PathBuf::from(cache_path.ok_or_else(|| {
+                })?,
+                cache_dir: cache_path.ok_or_else(|| {
                     Error::MissingCommandLineArg("--cache-dir")
-                })?),
+                })?,
                 manifest_uri: DEFAULT_MANIFEST_URI.to_owned(),
                 cdn_uri: DEFAULT_CDN_URI.to_owned(),
                 store_passwords: false,
