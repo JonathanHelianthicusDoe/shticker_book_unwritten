@@ -1,9 +1,9 @@
 [licenses]
 copyleft = "allow"
 allow-osi-fsf-free = "both"
-# Explicitly allowing certain licenses is neccessary because SPDX incorrectly
-# neglects to mark certain licenses as FSF/OSI approved when they really are.
-allow = ["BSD-2-Clause"]
+# This license is used by `unicode-indent` because it makes use of Unicode’s
+# data. But it’s just a glorified BSD-2-Clause...
+allow = ["Unicode-DFS-2016"]
 # Denying common free-but-incompatible-with-the-GPL licenses.
 deny = [
     "AFL-1.1",
@@ -53,7 +53,7 @@ deny = [
 ]
 
 [[licenses.clarify]]
-name = "encoding_rs"
+name = "ring"
 version = "*"
-expression = "(Apache-2.0 OR MIT) AND BSD-3-Clause"
-license-files = [{ path = "COPYRIGHT", hash = 0x39f8ad31 }]
+expression = "ISC"
+license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
