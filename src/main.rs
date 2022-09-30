@@ -10,8 +10,9 @@ mod update;
 mod util;
 
 use clap::{
-    builder::ValueParser, crate_authors, crate_description, crate_name,
-    crate_version, value_parser, Arg, ArgAction, Command,
+    builder::{ArgPredicate, ValueParser},
+    crate_authors, crate_description, crate_name, crate_version, value_parser,
+    Arg, ArgAction, Command,
 };
 use error::Error;
 use reqwest::blocking as rb;
@@ -19,7 +20,7 @@ use std::{num::NonZeroUsize, process};
 
 fn main() {
     if let Err(e) = run() {
-        eprintln!("{}", e);
+        eprintln!("{e}");
 
         process::exit(e.return_code())
     }
@@ -60,18 +61,23 @@ fn run() -> Result<(), Error> {
                 .value_name("CONFIG_FILE")
                 .help("Configuration JSON file to use.")
                 .long_help(CONFIG_LONG_HELP)
-                .takes_value(true)
+                .num_args(1)
                 .value_parser(ValueParser::path_buf())
-                .conflicts_with("no-config"),
+                .conflicts_with("no-config")
+                .action(ArgAction::Set),
         )
         .arg(
             Arg::new("no-config")
                 .long("no-config")
                 .aliases(&["no-conf", "no-configuration"])
                 .help("Don't read nor write any config files.")
-                .takes_value(false)
-                .requires_all(&["install-dir", "cache-dir"])
-                .conflicts_with("config"),
+                .num_args(0)
+                .requires_ifs([
+                    (ArgPredicate::IsPresent, "install-dir"),
+                    (ArgPredicate::IsPresent, "cache-dir"),
+                ])
+                .conflicts_with("config")
+                .action(ArgAction::SetTrue),
         )
         .arg(
             Arg::new("install-dir")
@@ -86,8 +92,9 @@ fn run() -> Result<(), Error> {
                      will not be written to the config. Usually you won't \
                      need this option.",
                 )
-                .takes_value(true)
-                .value_parser(ValueParser::path_buf()),
+                .num_args(1)
+                .value_parser(ValueParser::path_buf())
+                .action(ArgAction::Set),
         )
         .arg(
             Arg::new("cache-dir")
@@ -103,7 +110,8 @@ fn run() -> Result<(), Error> {
                      named \"cache/\" and is in the same directory as the \
                      config file. Usually you won't need this option.",
                 )
-                .takes_value(true)
+                .num_args(1)
+                .action(ArgAction::Set)
                 .value_parser(ValueParser::path_buf()),
         )
         .arg(
@@ -115,7 +123,8 @@ fn run() -> Result<(), Error> {
                     "Suppresses auto-updating, although you can still decide \
                      to update via the `update`/`up` command.",
                 )
-                .takes_value(false),
+                .num_args(0)
+                .action(ArgAction::SetTrue),
         )
         .arg(
             Arg::new("username")
@@ -134,9 +143,8 @@ fn run() -> Result<(), Error> {
                      Then, if the login(s) succeed, command mode is entered \
                      (assuming `-d` is not supplied).",
                 )
-                .takes_value(true)
-                .action(ArgAction::Append)
-                .multiple_values(true),
+                .num_args(1..)
+                .action(ArgAction::Append),
         )
         .arg(
             Arg::new("detach")
@@ -155,7 +163,8 @@ fn run() -> Result<(), Error> {
                      reparented to the init process (actually, on Linux, the \
                      closest parent process marked as a subreaper).",
                 )
-                .takes_value(false),
+                .num_args(0)
+                .action(ArgAction::SetTrue),
         )
         .arg(
             Arg::new("quiet")
@@ -165,7 +174,8 @@ fn run() -> Result<(), Error> {
                     "Don't output anything unless necessary or explicitly \
                      requested.",
                 )
-                .takes_value(false),
+                .num_args(0)
+                .action(ArgAction::SetTrue),
         )
         .arg(
             Arg::new("tries")
@@ -181,7 +191,8 @@ fn run() -> Result<(), Error> {
                      5. Currently works for downloading files, including the \
                      manifest.",
                 )
-                .takes_value(true)
+                .num_args(1)
+                .action(ArgAction::Set)
                 .value_parser(value_parser!(NonZeroUsize)),
         )
         .arg(
@@ -196,12 +207,13 @@ fn run() -> Result<(), Error> {
                      not updates are available, and for which files; that \
                      is, no updates will be downloaded nor applied.",
                 )
-                .takes_value(false)
+                .num_args(0)
+                .action(ArgAction::SetTrue)
                 .conflicts_with("no-auto-update"),
         )
         .get_matches();
 
-    let quiet = arg_matches.contains_id("quiet");
+    let quiet = arg_matches.get_one("quiet").copied().unwrap_or(false);
     let max_tries =
         if let Some(tries) = arg_matches.get_one::<NonZeroUsize>("tries") {
             *tries
@@ -210,7 +222,7 @@ fn run() -> Result<(), Error> {
         };
 
     let (mut config, config_path) = config::get_config(
-        arg_matches.contains_id("no-config"),
+        arg_matches.get_one("no-config").copied().unwrap_or(false),
         arg_matches.get_one("config").cloned(),
         arg_matches.get_one("install-dir").cloned(),
         arg_matches.get_one("cache-dir").cloned(),
@@ -221,13 +233,17 @@ fn run() -> Result<(), Error> {
         .build()
         .map_err(Error::HttpClientCreateError)?;
 
-    if !arg_matches.contains_id("no-auto-update") {
+    if !arg_matches
+        .get_one("no-auto-update")
+        .copied()
+        .unwrap_or(false)
+    {
         update::update(
             &config,
             &client,
             quiet,
             max_tries,
-            arg_matches.contains_id("dry-update"),
+            arg_matches.get_one("dry-update").copied().unwrap_or(false),
         )?;
 
         if !quiet {
@@ -243,7 +259,7 @@ fn run() -> Result<(), Error> {
         arg_matches
             .get_many::<String>("username")
             .map(|it| it.map(|v| v.as_str())),
-        arg_matches.contains_id("detach"),
+        arg_matches.get_one("detach").copied().unwrap_or(false),
         max_tries,
     )
 }

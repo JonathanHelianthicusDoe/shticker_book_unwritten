@@ -1,6 +1,6 @@
 [package]
 name = "shticker_book_unwritten"
-version = "1.1.0"
+version = "1.2.0"
 authors = ["Dr. Jonathan Helianthicus Doe, IV <augiii@protonmail.com>"]
 edition = "2021"
 description = "Minimal CLI launcher for the Toontown Rewritten MMORPG"
@@ -14,17 +14,25 @@ license = "GPL-3.0-or-later"
 [dependencies]
 bzip2 = "0.4.3"
 rpassword = "7.0.0"
-serde = { version = "1.0.140", features = ["derive"] }
-serde_json = "1.0.82"
+serde = { version = "1.0.145", features = ["derive"] }
+serde_json = "1.0.85"
 sha-1 = "0.10.0"
 
 [dependencies.clap]
-version = "3.2.15"
+version = "4.0.4"
 default-features = false
-features = ["std", "cargo", "suggestions"]
+features = [
+    "std",
+    "cargo",
+    "suggestions",
+    "help",
+    "usage",
+    "error-context",
+    "wrap_help",
+]
 
 [dependencies.reqwest]
-version = "0.11.11"
+version = "0.11.12"
 default-features = false
 features = ["blocking", "rustls-tls"]
 
