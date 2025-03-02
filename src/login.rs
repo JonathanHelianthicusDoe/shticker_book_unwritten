@@ -27,30 +27,39 @@ const SECRET_ITEM_ATTRIBUTE: &str = "user";
 fn get_saved_password(
     _config: &Config,
     username: &str,
-) -> Result<Option<String>, Box<dyn std::error::Error>> {
+) -> Result<Option<String>, Error> {
     use secret_service::{blocking::SecretService, EncryptionType};
     use std::collections::HashMap;
 
-    let secret_service = SecretService::connect(EncryptionType::Dh)?;
+    let secret_service = SecretService::connect(EncryptionType::Dh)
+        .map_err(Error::SessionStoreConnectError)?;
 
-    let collection = secret_service.get_default_collection()?;
+    let collection = secret_service
+        .get_default_collection()
+        .map_err(Error::SessionStoreConnectError)?;
 
-    collection.ensure_unlocked()?;
+    collection
+        .ensure_unlocked()
+        .map_err(Error::PasswordUnlockError)?;
 
-    let mut results = collection.search_items(HashMap::from([
-        (SECRET_ITEM_ATTRIBUTE, username),
-        (APP_ID, APP_ID_VALUE),
-    ]))?;
+    let mut results = collection
+        .search_items(HashMap::from([
+            (SECRET_ITEM_ATTRIBUTE, username),
+            (APP_ID, APP_ID_VALUE),
+        ]))
+        .map_err(Error::SessionStoreConnectError)?;
 
     let Some(item) = results.pop() else {
         return Ok(None);
     };
 
-    item.ensure_unlocked()?;
+    item.ensure_unlocked().map_err(Error::PasswordUnlockError)?;
 
-    let secret = item.get_secret()?;
+    let secret = item.get_secret().map_err(Error::PasswordGetError)?;
 
-    Ok(Some(String::from_utf8(secret)?))
+    Ok(Some(
+        String::from_utf8(secret).map_err(Error::PasswordUtf8Error)?,
+    ))
 }
 
 #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
@@ -77,26 +86,33 @@ fn save_password<P: AsRef<Path>>(
     _config_path: P,
     username: String,
     password: String,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Error> {
     use secret_service::{blocking::SecretService, EncryptionType};
     use std::collections::HashMap;
 
-    let secret_service = SecretService::connect(EncryptionType::Dh)?;
+    let secret_service = SecretService::connect(EncryptionType::Dh)
+        .map_err(Error::SessionStoreConnectError)?;
 
-    let collection = secret_service.get_default_collection()?;
+    let collection = secret_service
+        .get_default_collection()
+        .map_err(Error::SessionStoreConnectError)?;
 
-    collection.ensure_unlocked()?;
+    collection
+        .ensure_unlocked()
+        .map_err(Error::PasswordUnlockError)?;
 
-    collection.create_item(
-        SECRET_ITEM_LABEL,
-        HashMap::from([
-            (SECRET_ITEM_ATTRIBUTE, username.as_str()),
-            (APP_ID, APP_ID_VALUE),
-        ]),
-        password.as_bytes(),
-        true, // replace
-        "text/plain",
-    )?;
+    collection
+        .create_item(
+            SECRET_ITEM_LABEL,
+            HashMap::from([
+                (SECRET_ITEM_ATTRIBUTE, username.as_str()),
+                (APP_ID, APP_ID_VALUE),
+            ]),
+            password.as_bytes(),
+            true, // replace
+            "text/plain",
+        )
+        .map_err(Error::PasswordSaveError)?;
 
     Ok(())
 }
@@ -134,9 +150,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
 
     if !usernames.is_empty() {
         for username in usernames {
-            if let Some(password) =
-                get_saved_password(config, username).unwrap()
-            {
+            if let Some(password) = get_saved_password(config, username)? {
                 handle_name_and_pw(
                     config,
                     config_path.as_ref(),
@@ -174,7 +188,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
         username_buf.truncate(username_buf.trim_end().len());
 
         let password = if let Some(password) =
-            get_saved_password(config, &username_buf).unwrap()
+            get_saved_password(config, &username_buf)?
         {
             password
         } else {
@@ -217,10 +231,8 @@ fn handle_name_and_pw<P: AsRef<Path>>(
         post_to_login_api(client, &params)?,
     )? {
         if !no_save {
-            let new_account =
-                get_saved_password(config, &username).unwrap().is_none();
-            save_password(config, config_path, username.clone(), password)
-                .unwrap();
+            let new_account = get_saved_password(config, &username)?.is_none();
+            save_password(config, config_path, username.clone(), password)?;
             if !quiet && new_account {
                 println!("New account saved in config!");
             }
