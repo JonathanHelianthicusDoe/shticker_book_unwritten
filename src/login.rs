@@ -1,7 +1,4 @@
-use crate::{
-    config::{commit_config, Config},
-    error::Error,
-};
+use crate::{config::Config, error::Error};
 use reqwest::{blocking as rb, header};
 use rpassword;
 use serde::Serialize;
@@ -16,6 +13,106 @@ use std::{
 
 const LOGIN_API_URI: &str =
     "https://www.toontownrewritten.com/api/login?format=json";
+
+#[cfg(all(target_os = "linux", feature = "secret-store"))]
+const APP_ID: &str = "app_id";
+#[cfg(all(target_os = "linux", feature = "secret-store"))]
+const APP_ID_VALUE: &str = "shticker_book_unwritten";
+#[cfg(all(target_os = "linux", feature = "secret-store"))]
+const SECRET_ITEM_LABEL: &str = "Toontown Credentials";
+#[cfg(all(target_os = "linux", feature = "secret-store"))]
+const SECRET_ITEM_ATTRIBUTE: &str = "user";
+
+#[cfg(all(target_os = "linux", feature = "secret-store"))]
+fn get_saved_password(
+    _config: &Config,
+    username: &str,
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    use secret_service::{blocking::SecretService, EncryptionType};
+    use std::collections::HashMap;
+
+    let secret_service = SecretService::connect(EncryptionType::Dh)?;
+
+    let collection = secret_service.get_default_collection()?;
+
+    collection.ensure_unlocked()?;
+
+    let mut results = collection.search_items(HashMap::from([
+        (SECRET_ITEM_ATTRIBUTE, username),
+        (APP_ID, APP_ID_VALUE),
+    ]))?;
+
+    let Some(item) = results.pop() else {
+        return Ok(None);
+    };
+
+    item.ensure_unlocked()?;
+
+    let secret = item.get_secret()?;
+
+    Ok(Some(String::from_utf8(secret)?))
+}
+
+#[cfg(not(all(target_os = "linux", feature = "secret-store")))]
+fn get_saved_password(
+    config: &Config,
+    username: &str,
+) -> Result<Option<String>, Error> {
+    Ok(config
+        .accounts
+        .get(username)
+        .and_then(|val| {
+            if let serde_json::Value::String(p) = val {
+                Some(p)
+            } else {
+                None
+            }
+        })
+        .cloned())
+}
+
+#[cfg(all(target_os = "linux", feature = "secret-store"))]
+fn save_password<P: AsRef<Path>>(
+    _config: &mut Config,
+    _config_path: P,
+    username: String,
+    password: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use secret_service::{blocking::SecretService, EncryptionType};
+    use std::collections::HashMap;
+
+    let secret_service = SecretService::connect(EncryptionType::Dh)?;
+
+    let collection = secret_service.get_default_collection()?;
+
+    collection.ensure_unlocked()?;
+
+    collection.create_item(
+        SECRET_ITEM_LABEL,
+        HashMap::from([
+            (SECRET_ITEM_ATTRIBUTE, username.as_str()),
+            (APP_ID, APP_ID_VALUE),
+        ]),
+        password.as_bytes(),
+        true, // replace
+        "text/plain",
+    )?;
+
+    Ok(())
+}
+
+#[cfg(not(all(target_os = "linux", feature = "secret-store")))]
+fn save_password<P: AsRef<Path>>(
+    config: &mut Config,
+    config_path: P,
+    username: String,
+    password: String,
+) -> Result<(), Error> {
+    config.add_account(username, password);
+    crate::config::commit_config(config, config_path)?;
+
+    Ok(())
+}
 
 pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
     config: &mut Config,
@@ -37,21 +134,8 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
 
     if !usernames.is_empty() {
         for username in usernames {
-            if let Some(password) = config
-                .accounts
-                .get(username)
-                .and_then(|val| {
-                    if let serde_json::Value::String(p) = val {
-                        if !quiet {
-                            println!("Using saved password...");
-                        }
-
-                        Some(p)
-                    } else {
-                        None
-                    }
-                })
-                .cloned()
+            if let Some(password) =
+                get_saved_password(config, username).unwrap()
             {
                 handle_name_and_pw(
                     config,
@@ -90,18 +174,9 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
         username_buf.truncate(username_buf.trim_end().len());
 
         let password = if let Some(password) =
-            config.accounts.get(&username_buf).and_then(|val| {
-                if let serde_json::Value::String(p) = val {
-                    if !quiet {
-                        println!("Using saved password...");
-                    }
-
-                    Some(p)
-                } else {
-                    None
-                }
-            }) {
-            password.clone()
+            get_saved_password(config, &username_buf).unwrap()
+        {
+            password
         } else {
             print!("Password for {}: ", username_buf);
             io::stdout().flush().map_err(Error::StdoutError)?;
@@ -142,9 +217,11 @@ fn handle_name_and_pw<P: AsRef<Path>>(
         post_to_login_api(client, &params)?,
     )? {
         if !no_save {
-            let old_acc = config.add_account(username.clone(), password);
-            commit_config(config, config_path)?;
-            if !quiet && old_acc.is_none() {
+            let new_account =
+                get_saved_password(config, &username).unwrap().is_none();
+            save_password(config, config_path, username.clone(), password)
+                .unwrap();
+            if !quiet && new_account {
                 println!("New account saved in config!");
             }
         }
