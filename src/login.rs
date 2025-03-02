@@ -151,6 +151,10 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
     if !usernames.is_empty() {
         for username in usernames {
             if let Some(password) = get_saved_password(config, username)? {
+                if !quiet {
+                    println!("Using saved password...");
+                }
+
                 handle_name_and_pw(
                     config,
                     config_path.as_ref(),
@@ -190,6 +194,10 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
         let password = if let Some(password) =
             get_saved_password(config, &username_buf)?
         {
+            if !quiet {
+                println!("Using saved password...");
+            }
+
             password
         } else {
             print!("Password for {}: ", username_buf);
