@@ -13,7 +13,7 @@ license = "GPL-3.0-or-later"
 
 [features]
 default = []
-secret-store = ["secret-service"]
+secret-store = ["dep:secret-service"]
 
 [dependencies]
 bzip2 = "0.4.4"
