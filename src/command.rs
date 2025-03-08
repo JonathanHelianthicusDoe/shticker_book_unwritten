@@ -1,4 +1,4 @@
-use crate::{config::Config, error::Error, login, update};
+use crate::{config::Config, error::Error, keyring, login, update};
 use clap::{crate_name, crate_version};
 use reqwest::blocking as rb;
 use std::{
@@ -380,17 +380,29 @@ fn display_accounts(
     config: &Config,
     children: &[(String, process::Child, time::Instant)],
 ) -> Result<(), Error> {
-    let max_name_len = if let Some(l) =
-        config.accounts.iter().map(|(un, _)| un.len()).max()
+    #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
+    let stored_accounts: Vec<String> = vec![];
+    #[cfg(all(target_os = "linux", feature = "secret-store"))]
+    let stored_accounts = keyring::stored_accounts()?;
+
+    let max_name_len = if let Some(l) = config
+        .accounts
+        .iter()
+        .map(|(un, _)| un.len())
+        .chain(stored_accounts.iter().map(|u| u.len()))
+        .max()
     {
         l
     } else {
         return Ok(());
     };
 
-    for (username, saved_password) in
-        config.accounts.iter().map(|(un, p)| (un, p.is_string()))
-    {
+    #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
+    let accounts = config.accounts.iter().map(|(un, p)| (un, p.is_string()));
+    #[cfg(all(target_os = "linux", feature = "secret-store"))]
+    let accounts = stored_accounts.iter().map(|u| (u, true));
+
+    for (username, saved_password) in accounts {
         print!(
             "{} {}   ",
             if children.iter().any(|(un, _, _)| un == username) {

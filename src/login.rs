@@ -1,3 +1,5 @@
+#[cfg(all(target_os = "linux", feature = "secret-store"))]
+use crate::keyring::{get_saved_password, save_password};
 use crate::{config::Config, error::Error};
 use reqwest::{blocking as rb, header};
 use rpassword;
@@ -13,54 +15,6 @@ use std::{
 
 const LOGIN_API_URI: &str =
     "https://www.toontownrewritten.com/api/login?format=json";
-
-#[cfg(all(target_os = "linux", feature = "secret-store"))]
-const APP_ID: &str = "app_id";
-#[cfg(all(target_os = "linux", feature = "secret-store"))]
-const APP_ID_VALUE: &str = "shticker_book_unwritten";
-#[cfg(all(target_os = "linux", feature = "secret-store"))]
-const SECRET_ITEM_LABEL: &str = "Toontown Credentials";
-#[cfg(all(target_os = "linux", feature = "secret-store"))]
-const SECRET_ITEM_ATTRIBUTE: &str = "user";
-
-#[cfg(all(target_os = "linux", feature = "secret-store"))]
-fn get_saved_password(
-    _config: &Config,
-    username: &str,
-) -> Result<Option<String>, Error> {
-    use secret_service::{blocking::SecretService, EncryptionType};
-    use std::collections::HashMap;
-
-    let secret_service = SecretService::connect(EncryptionType::Dh)
-        .map_err(Error::SessionStoreConnectError)?;
-
-    let collection = secret_service
-        .get_default_collection()
-        .map_err(Error::SessionStoreConnectError)?;
-
-    collection
-        .ensure_unlocked()
-        .map_err(Error::PasswordUnlockError)?;
-
-    let mut results = collection
-        .search_items(HashMap::from([
-            (SECRET_ITEM_ATTRIBUTE, username),
-            (APP_ID, APP_ID_VALUE),
-        ]))
-        .map_err(Error::SessionStoreConnectError)?;
-
-    let Some(item) = results.pop() else {
-        return Ok(None);
-    };
-
-    item.ensure_unlocked().map_err(Error::PasswordUnlockError)?;
-
-    let secret = item.get_secret().map_err(Error::PasswordGetError)?;
-
-    Ok(Some(
-        String::from_utf8(secret).map_err(Error::PasswordUtf8Error)?,
-    ))
-}
 
 #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
 fn get_saved_password(
@@ -78,43 +32,6 @@ fn get_saved_password(
             }
         })
         .cloned())
-}
-
-#[cfg(all(target_os = "linux", feature = "secret-store"))]
-fn save_password<P: AsRef<Path>>(
-    _config: &mut Config,
-    _config_path: P,
-    username: String,
-    password: String,
-) -> Result<(), Error> {
-    use secret_service::{blocking::SecretService, EncryptionType};
-    use std::collections::HashMap;
-
-    let secret_service = SecretService::connect(EncryptionType::Dh)
-        .map_err(Error::SessionStoreConnectError)?;
-
-    let collection = secret_service
-        .get_default_collection()
-        .map_err(Error::SessionStoreConnectError)?;
-
-    collection
-        .ensure_unlocked()
-        .map_err(Error::PasswordUnlockError)?;
-
-    collection
-        .create_item(
-            SECRET_ITEM_LABEL,
-            HashMap::from([
-                (SECRET_ITEM_ATTRIBUTE, username.as_str()),
-                (APP_ID, APP_ID_VALUE),
-            ]),
-            password.as_bytes(),
-            true, // replace
-            "text/plain",
-        )
-        .map_err(Error::PasswordSaveError)?;
-
-    Ok(())
 }
 
 #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
