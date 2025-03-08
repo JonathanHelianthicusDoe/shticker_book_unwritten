@@ -1,4 +1,4 @@
-use crate::{config::Config, error::Error, keyring, login, update};
+use crate::{config::Config, error::Error, login, update};
 use clap::{crate_name, crate_version};
 use reqwest::blocking as rb;
 use std::{
@@ -383,7 +383,7 @@ fn display_accounts(
     #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
     let stored_accounts: Vec<String> = vec![];
     #[cfg(all(target_os = "linux", feature = "secret-store"))]
-    let stored_accounts = keyring::stored_accounts()?;
+    let stored_accounts = crate::keyring::stored_accounts()?;
 
     let max_name_len = if let Some(l) = config
         .accounts
