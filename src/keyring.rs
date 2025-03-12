@@ -14,33 +14,33 @@ pub(super) fn get_saved_password(
     username: &str,
 ) -> Result<Option<String>, Error> {
     let secret_service = SecretService::connect(EncryptionType::Dh)
-        .map_err(Error::SessionStoreConnectError)?;
+        .map_err(Error::SessionStoreConnect)?;
 
     let collection = secret_service
         .get_default_collection()
-        .map_err(Error::SessionStoreConnectError)?;
+        .map_err(Error::SessionStoreConnect)?;
 
     collection
         .ensure_unlocked()
-        .map_err(Error::PasswordUnlockError)?;
+        .map_err(Error::PasswordUnlock)?;
 
     let mut results = collection
         .search_items(HashMap::from([
             (SECRET_ITEM_ATTRIBUTE, username),
             (APP_ID, APP_ID_VALUE),
         ]))
-        .map_err(Error::SessionStoreConnectError)?;
+        .map_err(Error::SessionStoreConnect)?;
 
     let Some(item) = results.pop() else {
         return Ok(None);
     };
 
-    item.ensure_unlocked().map_err(Error::PasswordUnlockError)?;
+    item.ensure_unlocked().map_err(Error::PasswordUnlock)?;
 
-    let secret = item.get_secret().map_err(Error::PasswordGetError)?;
+    let secret = item.get_secret().map_err(Error::PasswordGet)?;
 
     Ok(Some(
-        String::from_utf8(secret).map_err(Error::PasswordUtf8Error)?,
+        String::from_utf8(secret).map_err(Error::PasswordUtf8)?,
     ))
 }
 
@@ -51,15 +51,15 @@ pub(super) fn save_password<P: AsRef<Path>>(
     password: String,
 ) -> Result<(), Error> {
     let secret_service = SecretService::connect(EncryptionType::Dh)
-        .map_err(Error::SessionStoreConnectError)?;
+        .map_err(Error::SessionStoreConnect)?;
 
     let collection = secret_service
         .get_default_collection()
-        .map_err(Error::SessionStoreConnectError)?;
+        .map_err(Error::SessionStoreConnect)?;
 
     collection
         .ensure_unlocked()
-        .map_err(Error::PasswordUnlockError)?;
+        .map_err(Error::PasswordUnlock)?;
 
     collection
         .create_item(
@@ -72,34 +72,34 @@ pub(super) fn save_password<P: AsRef<Path>>(
             true, // replace
             "text/plain",
         )
-        .map_err(Error::PasswordSaveError)?;
+        .map_err(Error::PasswordSave)?;
 
     Ok(())
 }
 
 pub(super) fn stored_accounts() -> Result<Vec<String>, Error> {
     let secret_service = SecretService::connect(EncryptionType::Dh)
-        .map_err(Error::SessionStoreConnectError)?;
+        .map_err(Error::SessionStoreConnect)?;
 
     let collection = secret_service
         .get_default_collection()
-        .map_err(Error::SessionStoreConnectError)?;
+        .map_err(Error::SessionStoreConnect)?;
 
     collection
         .ensure_unlocked()
-        .map_err(Error::PasswordUnlockError)?;
+        .map_err(Error::PasswordUnlock)?;
 
     let results = collection
         .search_items(HashMap::from([(APP_ID, APP_ID_VALUE)]))
-        .map_err(Error::SessionStoreConnectError)?;
+        .map_err(Error::SessionStoreConnect)?;
 
     results
         .into_iter()
         .map(|item| {
-            item.ensure_unlocked().map_err(Error::PasswordUnlockError)?;
+            item.ensure_unlocked().map_err(Error::PasswordUnlock)?;
 
             let attributes =
-                item.get_attributes().map_err(Error::PasswordGetError)?;
+                item.get_attributes().map_err(Error::PasswordGet)?;
 
             let username = attributes.get(SECRET_ITEM_ATTRIBUTE).cloned();
 

@@ -58,7 +58,7 @@ fn run() -> Result<(), Error> {
             Arg::new("config")
                 .short('c')
                 .long("config")
-                .aliases(&["conf", "configuration"])
+                .aliases(["conf", "configuration"])
                 .value_name("CONFIG_FILE")
                 .help("Configuration JSON file to use.")
                 .long_help(CONFIG_LONG_HELP)
@@ -70,7 +70,7 @@ fn run() -> Result<(), Error> {
         .arg(
             Arg::new("no-config")
                 .long("no-config")
-                .aliases(&["no-conf", "no-configuration"])
+                .aliases(["no-conf", "no-configuration"])
                 .help("Don't read nor write any config files.")
                 .num_args(0)
                 .requires_ifs([
@@ -232,7 +232,7 @@ fn run() -> Result<(), Error> {
 
     let client = rb::ClientBuilder::new()
         .build()
-        .map_err(Error::HttpClientCreateError)?;
+        .map_err(Error::HttpClientCreate)?;
 
     if !arg_matches
         .get_one("no-auto-update")

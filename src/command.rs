@@ -74,11 +74,11 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
 
     'outer: loop {
         print!("> ");
-        io::stdout().flush().map_err(Error::StdoutError)?;
+        io::stdout().flush().map_err(Error::Stdout)?;
         command_buf.clear();
         io::stdin()
             .read_line(&mut command_buf)
-            .map_err(Error::StdinError)?;
+            .map_err(Error::Stdin)?;
 
         // ^D
         if command_buf.is_empty() {
@@ -116,25 +116,25 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                     );
                 }
 
-                io::stdout().flush().map_err(Error::StdoutError)?;
+                io::stdout().flush().map_err(Error::Stdout)?;
                 command_buf.clear();
                 io::stdin()
                     .read_line(&mut command_buf)
-                    .map_err(Error::StdinError)?;
+                    .map_err(Error::Stdin)?;
 
                 loop {
-                    match command_buf.trim_start().as_bytes().get(0) {
+                    match command_buf.trim_start().as_bytes().first() {
                         Some(b'y') | Some(b'Y') => break 'outer,
                         Some(b'n') | Some(b'N') => break,
                         _ => (),
                     }
 
                     print!("[y/n]?\n> ");
-                    io::stdout().flush().map_err(Error::StdoutError)?;
+                    io::stdout().flush().map_err(Error::Stdout)?;
                     command_buf.clear();
                     io::stdin()
                         .read_line(&mut command_buf)
-                        .map_err(Error::StdinError)?;
+                        .map_err(Error::Stdin)?;
                 }
             }
             Some("update") | Some("up") => {
@@ -152,25 +152,21 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                     }
                 }
 
-                if dry {
+                if dry || children.is_empty() {
                     update::update(config, client, quiet, max_tries, dry)?
-                } else {
-                    if children.is_empty() {
-                        update::update(config, client, quiet, max_tries, dry)?
-                    } else if children.len() == 1 {
-                        println!(
-                            "There's still a game instance running, can't \
+                } else if children.len() == 1 {
+                    println!(
+                        "There's still a game instance running, can't \
                              update now!\n(Pass in -y or --dry-update if you \
                              just want to check for updates.)",
-                        );
-                    } else {
-                        println!(
-                            "There are still {} game instances running, \
+                    );
+                } else {
+                    println!(
+                        "There are still {} game instances running, \
                              can't update now!\n(Pass in -y or --dry-update \
                              if you just want to check for updates.)",
-                            children.len(),
-                        );
-                    }
+                        children.len(),
+                    );
                 }
             }
             Some("login") | Some("play") | Some("launch") => {
@@ -344,7 +340,7 @@ fn kill_instance(
 
         if let Err(ioe) = child.kill() {
             if ioe.kind() != io::ErrorKind::InvalidInput {
-                return Err(Error::ProcessKillError(pid, ioe));
+                return Err(Error::ProcessKill(pid, ioe));
             }
         }
 
@@ -352,7 +348,7 @@ fn kill_instance(
             println!("Joining instance's thread...");
         }
 
-        child.wait().map_err(Error::ThreadJoinError)?;
+        child.wait().map_err(Error::ThreadJoin)?;
 
         if !quiet {
             println!(
@@ -430,7 +426,7 @@ fn check_children(
     let mut i = 0;
     while let Some((username, child, _)) = children.get_mut(i) {
         if let Some(exit_status) =
-            child.try_wait().map_err(Error::ThreadJoinError)?
+            child.try_wait().map_err(Error::ThreadJoin)?
         {
             if !quiet {
                 if exit_status.success() {

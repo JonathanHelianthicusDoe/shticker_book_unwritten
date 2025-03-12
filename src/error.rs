@@ -1,58 +1,56 @@
-use reqwest;
-use serde_json;
 use std::{error, fmt, io, path::PathBuf};
 
 #[derive(Debug)]
 pub enum Error {
     NoPossibleConfigPath,
     BadConfigPath(PathBuf),
-    MkdirError(PathBuf, io::Error),
+    Mkdir(PathBuf, io::Error),
     PermissionDenied(String, io::Error),
-    StdoutError(io::Error),
-    StdinError(io::Error),
-    UnknownIoError(String, io::Error),
-    SerializeError(serde_json::Error),
-    DeserializeError(serde_json::Error),
-    ManifestRequestError(reqwest::Error),
-    ManifestRequestStatusError(reqwest::StatusCode),
+    Stdout(io::Error),
+    Stdin(io::Error),
+    UnknownIo(String, io::Error),
+    Serialize(serde_json::Error),
+    Deserialize(serde_json::Error),
+    ManifestRequest(reqwest::Error),
+    ManifestRequestStatus(reqwest::StatusCode),
     BadManifestFormat(String),
-    FileReadError(PathBuf, io::Error),
-    FileWriteError(PathBuf, io::Error),
-    DownloadRequestError(reqwest::Error),
-    DownloadRequestStatusError(reqwest::StatusCode),
-    CopyIntoFileError(PathBuf, reqwest::Error),
-    DecodeError(PathBuf, io::Error),
+    FileRead(PathBuf, io::Error),
+    FileWrite(PathBuf, io::Error),
+    DownloadRequest(reqwest::Error),
+    DownloadRequestStatus(reqwest::StatusCode),
+    CopyIntoFile(PathBuf, reqwest::Error),
+    Decode(PathBuf, io::Error),
     BadPatchVersion,
     BadPatchSize,
-    SeekError(PathBuf, io::Error),
+    Seek(PathBuf, io::Error),
     PatchSanityCheckFail(u8),
-    FileRenameError(PathBuf, PathBuf),
+    FileRename(PathBuf, PathBuf),
     NotDir(PathBuf),
-    RemoveFileError(PathBuf, io::Error),
+    RemoveFile(PathBuf, io::Error),
     #[allow(dead_code)]
     MissingFile(&'static str),
     #[allow(dead_code)]
-    PermissionsSetError(PathBuf, io::Error),
+    PermissionsSet(PathBuf, io::Error),
     MissingCommandLineArg(&'static str),
-    PasswordReadError(io::Error),
-    HttpClientCreateError(reqwest::Error),
-    PostError(reqwest::Error),
+    PasswordRead(io::Error),
+    HttpClientCreate(reqwest::Error),
+    Post(reqwest::Error),
     BadLoginResponse(&'static str),
     UnexpectedSuccessValue(String),
-    ThreadSpawnError(io::Error),
-    ThreadJoinError(io::Error),
-    ProcessKillError(u32, io::Error),
+    ThreadSpawn(io::Error),
+    ThreadJoin(io::Error),
+    ProcessKill(u32, io::Error),
     HashMismatch(PathBuf, [u8; 20]),
     #[cfg(all(target_os = "linux", feature = "secret-store"))]
-    SessionStoreConnectError(secret_service::Error),
+    SessionStoreConnect(secret_service::Error),
     #[cfg(all(target_os = "linux", feature = "secret-store"))]
-    PasswordUnlockError(secret_service::Error),
+    PasswordUnlock(secret_service::Error),
     #[cfg(all(target_os = "linux", feature = "secret-store"))]
-    PasswordGetError(secret_service::Error),
+    PasswordGet(secret_service::Error),
     #[cfg(all(target_os = "linux", feature = "secret-store"))]
-    PasswordUtf8Error(std::string::FromUtf8Error),
+    PasswordUtf8(std::string::FromUtf8Error),
     #[cfg(all(target_os = "linux", feature = "secret-store"))]
-    PasswordSaveError(secret_service::Error),
+    PasswordSave(secret_service::Error),
 }
 
 impl fmt::Display for Error {
@@ -76,27 +74,27 @@ impl fmt::Display for Error {
             Self::BadConfigPath(bcp) => {
                 write!(f, "Bad config file path specified: {}", bcp.display())
             }
-            Self::MkdirError(path, ioe) => {
+            Self::Mkdir(path, ioe) => {
                 write!(f, "`mkdir -p {:?}` failed:\n\t{}", path, ioe)
             }
             Self::PermissionDenied(info, ioe) => {
                 write!(f, "Permission denied while {}:\n\t{}", info, ioe)
             }
-            Self::StdoutError(ioe) => write!(f, "stdout error:\n\t{}", ioe),
-            Self::StdinError(ioe) => write!(f, "stdin error:\n\t{}", ioe),
-            Self::UnknownIoError(info, ioe) => {
+            Self::Stdout(ioe) => write!(f, "stdout error:\n\t{}", ioe),
+            Self::Stdin(ioe) => write!(f, "stdin error:\n\t{}", ioe),
+            Self::UnknownIo(info, ioe) => {
                 write!(f, "Unknown I/O error while {}:\n\t{}", info, ioe)
             }
-            Self::SerializeError(se) => {
+            Self::Serialize(se) => {
                 write!(f, "Failed to write JSON:\n\t{}", se)
             }
-            Self::DeserializeError(de) => {
+            Self::Deserialize(de) => {
                 write!(f, "Failed to read JSON:\n\t{}", de)
             }
-            Self::ManifestRequestError(mre) => {
+            Self::ManifestRequest(mre) => {
                 write!(f, "Error requesting manifest:\n\t{}", mre)
             }
-            Self::ManifestRequestStatusError(sc) => write!(
+            Self::ManifestRequestStatus(sc) => write!(
                 f,
                 "Bad status code after requesting manifest:\n\t{}",
                 sc,
@@ -104,24 +102,24 @@ impl fmt::Display for Error {
             Self::BadManifestFormat(s) => {
                 write!(f, "Bad manifest format:\n\t{}", s)
             }
-            Self::FileReadError(path, ioe) => {
+            Self::FileRead(path, ioe) => {
                 write!(f, "Failed to read from {:?}:\n\t{}", path, ioe)
             }
-            Self::FileWriteError(path, ioe) => {
+            Self::FileWrite(path, ioe) => {
                 write!(f, "Failed to write to {:?}:\n\t{}", path, ioe)
             }
-            Self::DownloadRequestError(dre) => {
+            Self::DownloadRequest(dre) => {
                 write!(f, "Error requesting download: {}", dre)
             }
-            Self::DownloadRequestStatusError(sc) => {
+            Self::DownloadRequestStatus(sc) => {
                 write!(f, "Bad status code after requesting download: {}", sc)
             }
-            Self::CopyIntoFileError(path, cife) => write!(
+            Self::CopyIntoFile(path, cife) => write!(
                 f,
                 "Failure copying HTTP-downloaded data into {:?}:\n\t{}",
                 path, cife,
             ),
-            Self::DecodeError(path, ioe) => write!(
+            Self::Decode(path, ioe) => write!(
                 f,
                 "Error decoding bzip2 in file {:?}:\n\t{}",
                 path, ioe,
@@ -132,7 +130,7 @@ impl fmt::Display for Error {
             Self::BadPatchSize => f.write_str(
                 "Unable to determine patch's size, or patch is invalid",
             ),
-            Self::SeekError(path, ioe) => write!(
+            Self::Seek(path, ioe) => write!(
                 f,
                 "Error while seeking through file {:?}:\n\t{}",
                 path, ioe,
@@ -140,17 +138,17 @@ impl fmt::Display for Error {
             Self::PatchSanityCheckFail(i) => {
                 write!(f, "During patching, sanity check #{} failed", i)
             }
-            Self::FileRenameError(from, to) => {
+            Self::FileRename(from, to) => {
                 write!(f, "Error renaming file from {:?} to {:?}", from, to)
             }
             Self::NotDir(path) => write!(f, "{:?} is not a directory", path),
-            Self::RemoveFileError(path, ioe) => {
+            Self::RemoveFile(path, ioe) => {
                 write!(f, "Error removing file {:?}:\n\t{}", path, ioe)
             }
             Self::MissingFile(name) => {
                 write!(f, "Expected \"{}\" file to exist", name)
             }
-            Self::PermissionsSetError(path, ioe) => write!(
+            Self::PermissionsSet(path, ioe) => write!(
                 f,
                 "Failure to set permissions on file {:?}:\n\t{}",
                 path, ioe,
@@ -160,13 +158,13 @@ impl fmt::Display for Error {
                 "Expected the {} command line argument to be present",
                 a,
             ),
-            Self::PasswordReadError(ioe) => {
+            Self::PasswordRead(ioe) => {
                 write!(f, "Error reading password:\n\t{}", ioe)
             }
-            Self::HttpClientCreateError(hcce) => {
+            Self::HttpClientCreate(hcce) => {
                 write!(f, "Error creating HTTP client:\n\t{}", hcce)
             }
-            Self::PostError(pe) => {
+            Self::Post(pe) => {
                 write!(f, "Error sending HTTP POST:\n\t{}", pe)
             }
             Self::BadLoginResponse(blr) => {
@@ -175,13 +173,13 @@ impl fmt::Display for Error {
             Self::UnexpectedSuccessValue(value) => {
                 write!(f, "Unexpected \"success\" value: {}", value)
             }
-            Self::ThreadSpawnError(ioe) => {
+            Self::ThreadSpawn(ioe) => {
                 write!(f, "Error spawning thread:\n\t{}", ioe)
             }
-            Self::ThreadJoinError(ioe) => {
+            Self::ThreadJoin(ioe) => {
                 write!(f, "Error attempting to join thread:\n\t{}", ioe)
             }
-            Self::ProcessKillError(pid, ioe) => write!(
+            Self::ProcessKill(pid, ioe) => write!(
                 f,
                 "Error killing child process with pid {}:\n\t{}",
                 pid, ioe,
@@ -200,7 +198,7 @@ impl fmt::Display for Error {
                 Ok(())
             }
             #[cfg(all(target_os = "linux", feature = "secret-store"))]
-            Self::SessionStoreConnectError(error) => {
+            Self::SessionStoreConnect(error) => {
                 write!(
                     f,
                     "Failed to connect to session password store:\n\t{}",
@@ -208,7 +206,7 @@ impl fmt::Display for Error {
                 )
             }
             #[cfg(all(target_os = "linux", feature = "secret-store"))]
-            Self::PasswordUnlockError(error) => {
+            Self::PasswordUnlock(error) => {
                 write!(
                     f,
                     "Could not unlock password from session store:\n\t{}",
@@ -216,7 +214,7 @@ impl fmt::Display for Error {
                 )
             }
             #[cfg(all(target_os = "linux", feature = "secret-store"))]
-            Self::PasswordGetError(error) => {
+            Self::PasswordGet(error) => {
                 write!(
                     f,
                     "Failed to get password from secret store:\n\t{}",
@@ -224,7 +222,7 @@ impl fmt::Display for Error {
                 )
             }
             #[cfg(all(target_os = "linux", feature = "secret-store"))]
-            Self::PasswordUtf8Error(error) => {
+            Self::PasswordUtf8(error) => {
                 write!(
                     f,
                     "Password from session store is invalid:\n\t{}",
@@ -232,7 +230,7 @@ impl fmt::Display for Error {
                 )
             }
             #[cfg(all(target_os = "linux", feature = "secret-store"))]
-            Self::PasswordSaveError(error) => {
+            Self::PasswordSave(error) => {
                 write!(
                     f,
                     "Failed to save password in session store:\n\t{}",
@@ -250,51 +248,51 @@ impl Error {
         match self {
             Self::NoPossibleConfigPath => 1,
             Self::BadConfigPath(_) => 2,
-            Self::MkdirError(_, _) => 3,
+            Self::Mkdir(_, _) => 3,
             Self::PermissionDenied(_, _) => 4,
-            Self::StdoutError(_) => 5,
-            Self::StdinError(_) => 6,
-            Self::UnknownIoError(_, _) => 7,
-            Self::SerializeError(_) => 8,
-            Self::DeserializeError(_) => 9,
-            Self::ManifestRequestError(_) => 10,
-            Self::ManifestRequestStatusError(_) => 11,
+            Self::Stdout(_) => 5,
+            Self::Stdin(_) => 6,
+            Self::UnknownIo(_, _) => 7,
+            Self::Serialize(_) => 8,
+            Self::Deserialize(_) => 9,
+            Self::ManifestRequest(_) => 10,
+            Self::ManifestRequestStatus(_) => 11,
             Self::BadManifestFormat(_) => 12,
-            Self::FileReadError(_, _) => 13,
-            Self::FileWriteError(_, _) => 14,
-            Self::DownloadRequestError(_) => 15,
-            Self::DownloadRequestStatusError(_) => 16,
-            Self::CopyIntoFileError(_, _) => 17,
-            Self::DecodeError(_, _) => 18,
+            Self::FileRead(_, _) => 13,
+            Self::FileWrite(_, _) => 14,
+            Self::DownloadRequest(_) => 15,
+            Self::DownloadRequestStatus(_) => 16,
+            Self::CopyIntoFile(_, _) => 17,
+            Self::Decode(_, _) => 18,
             Self::BadPatchVersion => 19,
             Self::BadPatchSize => 20,
-            Self::SeekError(_, _) => 21,
+            Self::Seek(_, _) => 21,
             Self::PatchSanityCheckFail(_) => 22,
-            Self::FileRenameError(_, _) => 23,
+            Self::FileRename(_, _) => 23,
             Self::NotDir(_) => 24,
-            Self::RemoveFileError(_, _) => 25,
+            Self::RemoveFile(_, _) => 25,
             Self::MissingFile(_) => 26,
-            Self::PermissionsSetError(_, _) => 27,
+            Self::PermissionsSet(_, _) => 27,
             Self::MissingCommandLineArg(_) => 28,
-            Self::PasswordReadError(_) => 29,
-            Self::HttpClientCreateError(_) => 30,
-            Self::PostError(_) => 31,
+            Self::PasswordRead(_) => 29,
+            Self::HttpClientCreate(_) => 30,
+            Self::Post(_) => 31,
             Self::BadLoginResponse(_) => 32,
             Self::UnexpectedSuccessValue(_) => 33,
-            Self::ThreadSpawnError(_) => 34,
-            Self::ThreadJoinError(_) => 35,
-            Self::ProcessKillError(_, _) => 36,
+            Self::ThreadSpawn(_) => 34,
+            Self::ThreadJoin(_) => 35,
+            Self::ProcessKill(_, _) => 36,
             Self::HashMismatch(_, _) => 37,
             #[cfg(all(target_os = "linux", feature = "secret-store"))]
-            Self::SessionStoreConnectError(_) => 38,
+            Self::SessionStoreConnect(_) => 38,
             #[cfg(all(target_os = "linux", feature = "secret-store"))]
-            Self::PasswordUnlockError(_) => 39,
+            Self::PasswordUnlock(_) => 39,
             #[cfg(all(target_os = "linux", feature = "secret-store"))]
-            Self::PasswordGetError(_) => 40,
+            Self::PasswordGet(_) => 40,
             #[cfg(all(target_os = "linux", feature = "secret-store"))]
-            Self::PasswordUtf8Error(_) => 41,
+            Self::PasswordUtf8(_) => 41,
             #[cfg(all(target_os = "linux", feature = "secret-store"))]
-            Self::PasswordSaveError(_) => 42,
+            Self::PasswordSave(_) => 42,
         }
     }
 }

@@ -1,7 +1,6 @@
 use crate::{config::Config, error::Error, patch, util};
 use bzip2::write::BzDecoder as BzWriteDecoder;
 use reqwest::blocking as rb;
-use serde_json;
 use sha1::{Digest, Sha1};
 use std::{
     fs::{self, File},
@@ -199,7 +198,7 @@ pub fn update(
                     ))
                 }
                 _ => {
-                    return Err(Error::UnknownIoError(
+                    return Err(Error::UnknownIo(
                         format!("opening {:?}", install_dir),
                         ioe,
                     ))
@@ -248,7 +247,7 @@ pub fn update(
                     format!("obtaining metadata for {:?}", install_dir),
                     ioe,
                 ),
-                _ => Error::UnknownIoError(
+                _ => Error::UnknownIo(
                     format!("obtaining metadata for {:?}", install_dir),
                     ioe,
                 ),
@@ -265,7 +264,7 @@ pub fn update(
 
             ttrengine_perms.set_mode(ttrengine_mode | 0o700);
             fs::set_permissions(&install_dir, ttrengine_perms)
-                .map_err(|ioe| Error::PermissionsSetError(install_dir, ioe))?;
+                .map_err(|ioe| Error::PermissionsSet(install_dir, ioe))?;
 
             if !quiet {
                 println!("{} is now executable!", EXE_NAME);
@@ -278,6 +277,7 @@ pub fn update(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
     config: &Config,
     client: &rb::Client,
@@ -296,7 +296,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
     let mut file_buf = [0u8; BUFFER_SIZE];
     let initial_sha = sha_of_reader(&mut already_existing_file, &mut file_buf)
         .map_err(|ioe| {
-            Error::FileReadError(full_file_path.as_ref().to_path_buf(), ioe)
+            Error::FileRead(full_file_path.as_ref().to_path_buf(), ioe)
         })?;
 
     let manifest_sha = sha_from_hash_str(match file_map.get("hash") {
@@ -528,7 +528,7 @@ fn get_manifest(
         let manifest_resp = match client
             .get(&config.manifest_uri)
             .send()
-            .map_err(Error::ManifestRequestError)
+            .map_err(Error::ManifestRequest)
         {
             Ok(mr) => mr,
             Err(e) => {
@@ -538,15 +538,13 @@ fn get_manifest(
             }
         };
         if !manifest_resp.status().is_success() {
-            handle_retry(Error::ManifestRequestStatusError(
-                manifest_resp.status(),
-            ));
+            handle_retry(Error::ManifestRequestStatus(manifest_resp.status()));
 
             continue;
         }
 
         let manifest_text =
-            match manifest_resp.text().map_err(Error::ManifestRequestError) {
+            match manifest_resp.text().map_err(Error::ManifestRequest) {
                 Ok(mt) => mt,
                 Err(e) => {
                     handle_retry(e);
@@ -555,8 +553,7 @@ fn get_manifest(
                 }
             };
 
-        match serde_json::from_str(&manifest_text)
-            .map_err(Error::DeserializeError)
+        match serde_json::from_str(&manifest_text).map_err(Error::Deserialize)
         {
             Err(e) => handle_retry(e),
             ok => return ok,
@@ -590,7 +587,7 @@ fn sha_of_file_by_path<P: AsRef<Path>>(
     let mut n = buf.len();
     while n == buf.len() {
         n = file.read(buf).map_err(|ioe| {
-            Error::FileReadError(path.as_ref().to_path_buf(), ioe)
+            Error::FileRead(path.as_ref().to_path_buf(), ioe)
         })?;
         sha.update(&buf[..n]);
     }
@@ -602,7 +599,7 @@ fn sha_from_hash_str<S: AsRef<str>>(hash_str: S) -> Result<[u8; 20], Error> {
     let mut manifest_sha = [0u8; 20];
     for (i, &b) in hash_str.as_ref().as_bytes().iter().enumerate() {
         let nibble_val = match b {
-            b if b >= b'0' && b <= b'9' => b - b'0',
+            b if b.is_ascii_digit() => b - b'0',
             b'a' | b'A' => 0x0a,
             b'b' | b'B' => 0x0b,
             b'c' | b'C' => 0x0c,
@@ -691,20 +688,17 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
             );
         }
 
-        let mut dl_resp = match client
-            .get(&dl_uri)
-            .send()
-            .map_err(Error::DownloadRequestError)
-        {
-            Ok(dr) => dr,
-            Err(e) => {
-                handle_retry(e);
+        let mut dl_resp =
+            match client.get(&dl_uri).send().map_err(Error::DownloadRequest) {
+                Ok(dr) => dr,
+                Err(e) => {
+                    handle_retry(e);
 
-                continue;
-            }
-        };
+                    continue;
+                }
+            };
         if !dl_resp.status().is_success() {
-            handle_retry(Error::DownloadRequestStatusError(dl_resp.status()));
+            handle_retry(Error::DownloadRequestStatus(dl_resp.status()));
 
             continue;
         }
@@ -712,7 +706,7 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         {
             let mut dled_file = util::create_file(&compressed_file_path)?;
             dl_resp.copy_to(&mut dled_file).map_err(|re| {
-                Error::CopyIntoFileError(compressed_file_path.clone(), re)
+                Error::CopyIntoFile(compressed_file_path.clone(), re)
             })?;
         }
 
@@ -795,7 +789,7 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
     }
 
     fs::remove_file(&compressed_file_path)
-        .map_err(|ioe| Error::RemoveFileError(compressed_file_path, ioe))?;
+        .map_err(|ioe| Error::RemoveFile(compressed_file_path, ioe))?;
 
     if !quiet {
         println!(
@@ -820,15 +814,15 @@ fn decompress_file<P: AsRef<Path>>(
     let mut n = buf.len();
     while n == buf.len() {
         n = compressed_file.read(buf).map_err(|ioe| {
-            Error::FileReadError(compressed_path.as_ref().to_path_buf(), ioe)
+            Error::FileRead(compressed_path.as_ref().to_path_buf(), ioe)
         })?;
         decoder.write_all(&buf[..n]).map_err(|ioe| {
-            Error::DecodeError(decompress_path.as_ref().to_path_buf(), ioe)
+            Error::Decode(decompress_path.as_ref().to_path_buf(), ioe)
         })?;
     }
 
     decoder.finish().map(|_| ()).map_err(|ioe| {
-        Error::DecodeError(decompress_path.as_ref().to_path_buf(), ioe)
+        Error::Decode(decompress_path.as_ref().to_path_buf(), ioe)
     })
 }
 
@@ -842,16 +836,13 @@ fn ensure_dir<P: AsRef<Path>>(path: P) -> Result<(), Error> {
             }
         }
         Err(ioe) => match ioe.kind() {
-            io::ErrorKind::NotFound => {
-                fs::create_dir_all(&path).map_err(|ioe| {
-                    Error::MkdirError(path.as_ref().to_path_buf(), ioe)
-                })
-            }
+            io::ErrorKind::NotFound => fs::create_dir_all(&path)
+                .map_err(|ioe| Error::Mkdir(path.as_ref().to_path_buf(), ioe)),
             io::ErrorKind::PermissionDenied => Err(Error::PermissionDenied(
                 format!("obtaining metadata for {:?}", path.as_ref()),
                 ioe,
             )),
-            _ => Err(Error::UnknownIoError(
+            _ => Err(Error::UnknownIo(
                 format!("obtaining metadata for {:?}", path.as_ref()),
                 ioe,
             )),

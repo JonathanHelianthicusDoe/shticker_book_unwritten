@@ -58,7 +58,7 @@ pub fn patch_file<P: AsRef<Path>, Q: AsRef<Path>>(
     bsdiff_patch(patch_file_path, &target_file_path, &temp_file_path)?;
 
     std::fs::rename(&temp_file_path, &target_file_path).map_err(|_| {
-        Error::FileRenameError(
+        Error::FileRename(
             temp_file_path.into(),
             target_file_path.as_ref().to_path_buf(),
         )
@@ -77,7 +77,7 @@ fn bsdiff_patch<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
     // Write the new file
     let mut fd = util::create_file(&new_file_path)?;
     fd.write_all(&new[..]).map_err(|ioe| {
-        Error::FileWriteError(new_file_path.as_ref().to_path_buf(), ioe)
+        Error::FileWrite(new_file_path.as_ref().to_path_buf(), ioe)
     })?;
 
     Ok(())
@@ -112,7 +112,7 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
         // Read header
         let mut header = [0u8; 32];
         f.read_exact(&mut header).map_err(|ioe| {
-            Error::FileReadError(patch_file_path.as_ref().to_path_buf(), ioe)
+            Error::FileRead(patch_file_path.as_ref().to_path_buf(), ioe)
         })?;
 
         header
@@ -134,33 +134,33 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
     // Open patch file in the right places with libbzip2
     let mut cpf = util::open_file(&patch_file_path)?;
     cpf.seek(SeekFrom::Start(32)).map_err(|ioe| {
-        Error::SeekError(patch_file_path.as_ref().to_path_buf(), ioe)
+        Error::Seek(patch_file_path.as_ref().to_path_buf(), ioe)
     })?;
     let mut cpfbz2 = BzReadDecoder::new(cpf);
     let mut dpf = util::open_file(&patch_file_path)?;
     dpf.seek(SeekFrom::Start((32 + bzctrllen) as u64))
         .map_err(|ioe| {
-            Error::SeekError(patch_file_path.as_ref().to_path_buf(), ioe)
+            Error::Seek(patch_file_path.as_ref().to_path_buf(), ioe)
         })?;
     let mut dpfbz2 = BzReadDecoder::new(dpf);
     let mut epf = util::open_file(&patch_file_path)?;
     epf.seek(SeekFrom::Start((32 + bzctrllen + bzdatalen) as u64))
         .map_err(|ioe| {
-            Error::SeekError(patch_file_path.as_ref().to_path_buf(), ioe)
+            Error::Seek(patch_file_path.as_ref().to_path_buf(), ioe)
         })?;
     let mut epfbz2 = BzReadDecoder::new(epf);
 
     let mut fd = util::open_file(&old_file_path)?;
     let oldsize = fd.seek(SeekFrom::End(0)).map_err(|ioe| {
-        Error::SeekError(old_file_path.as_ref().to_path_buf(), ioe)
+        Error::Seek(old_file_path.as_ref().to_path_buf(), ioe)
     })? as i64;
     let mut old = Vec::with_capacity(oldsize as usize);
     old.resize_with(oldsize as usize, Default::default);
     fd.seek(SeekFrom::Start(0)).map_err(|ioe| {
-        Error::SeekError(old_file_path.as_ref().to_path_buf(), ioe)
+        Error::Seek(old_file_path.as_ref().to_path_buf(), ioe)
     })?;
     fd.read_exact(&mut old[..]).map_err(|ioe| {
-        Error::FileReadError(old_file_path.as_ref().to_path_buf(), ioe)
+        Error::FileRead(old_file_path.as_ref().to_path_buf(), ioe)
     })?;
 
     let mut new = Vec::with_capacity(newsize as usize);
@@ -175,7 +175,7 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
         // Read control data
         for ctrl_off in ctrl.iter_mut() {
             cpfbz2.read_exact(&mut buf).map_err(|ioe| {
-                Error::DecodeError(patch_file_path.as_ref().to_path_buf(), ioe)
+                Error::Decode(patch_file_path.as_ref().to_path_buf(), ioe)
             })?;
             *ctrl_off = offtin(&buf);
         }
@@ -189,7 +189,7 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
         dpfbz2
             .read_exact(&mut new[newpos as usize..(newpos + ctrl[0]) as usize])
             .map_err(|ioe| {
-                Error::DecodeError(patch_file_path.as_ref().to_path_buf(), ioe)
+                Error::Decode(patch_file_path.as_ref().to_path_buf(), ioe)
             })?;
 
         // Add old data to diff string
@@ -214,7 +214,7 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
         epfbz2
             .read_exact(&mut new[newpos as usize..(newpos + ctrl[1]) as usize])
             .map_err(|ioe| {
-                Error::DecodeError(patch_file_path.as_ref().to_path_buf(), ioe)
+                Error::Decode(patch_file_path.as_ref().to_path_buf(), ioe)
             })?;
 
         // Adjust pointers

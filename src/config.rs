@@ -1,7 +1,6 @@
 use crate::{error::Error, util};
 use clap::crate_name;
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::{
     env,
     fs::{self, File},
@@ -159,7 +158,7 @@ pub fn get_config(
 
         match File::open(&config_path) {
             Ok(f) => serde_json::from_reader(f)
-                .map_err(Error::DeserializeError)
+                .map_err(Error::Deserialize)
                 .map(|c| (inject_arg_values(c), config_path)),
             Err(ioe) => match ioe.kind() {
                 io::ErrorKind::NotFound => {
@@ -168,7 +167,7 @@ pub fn get_config(
                             Error::BadConfigPath(config_path.clone())
                         })?;
                     fs::create_dir_all(config_dir).map_err(|ioe| {
-                        Error::MkdirError(config_dir.to_path_buf(), ioe)
+                        Error::Mkdir(config_dir.to_path_buf(), ioe)
                     })?;
 
                     let mut new_config_file = util::create_file(&config_path)?;
@@ -178,7 +177,7 @@ pub fn get_config(
                         &mut new_config_file,
                         &new_config,
                     )
-                    .map_err(Error::SerializeError)?;
+                    .map_err(Error::Serialize)?;
 
                     Ok((inject_arg_values(new_config), config_path))
                 }
@@ -188,7 +187,7 @@ pub fn get_config(
                         ioe,
                     ))
                 }
-                _ => Err(Error::UnknownIoError(
+                _ => Err(Error::UnknownIo(
                     format!("opening {:?}", config_path),
                     ioe,
                 )),
@@ -227,11 +226,11 @@ fn prompt_for_config_values<P: AsRef<Path>>(
          already exist):\n> ",
         config_path.as_ref().display(),
     );
-    io::stdout().flush().map_err(Error::StdoutError)?;
+    io::stdout().flush().map_err(Error::Stdout)?;
     let mut install_dir = String::with_capacity(0x30);
     io::stdin()
         .read_line(&mut install_dir)
-        .map_err(Error::StdinError)?;
+        .map_err(Error::Stdin)?;
 
     print!(
         "\nDo you want passwords for your accounts to be stored in the \
@@ -240,11 +239,11 @@ fn prompt_for_config_values<P: AsRef<Path>>(
          your hard drive in plain text, you will have to use a separate \
          password manager app:\n> "
     );
-    io::stdout().flush().map_err(Error::StdoutError)?;
+    io::stdout().flush().map_err(Error::Stdout)?;
     let mut yes_no = String::with_capacity(4);
     io::stdin()
         .read_line(&mut yes_no)
-        .map_err(Error::StdinError)?;
+        .map_err(Error::Stdin)?;
     yes_no.make_ascii_lowercase();
     loop {
         let yes_no_trimmed = yes_no.as_str().trim();
@@ -268,11 +267,11 @@ fn prompt_for_config_values<P: AsRef<Path>>(
         }
 
         print!("Please enter \"yes\" or \"no\" (without quotes):\n> ");
-        io::stdout().flush().map_err(Error::StdoutError)?;
+        io::stdout().flush().map_err(Error::Stdout)?;
         yes_no.clear();
         io::stdin()
             .read_line(&mut yes_no)
-            .map_err(Error::StdinError)?;
+            .map_err(Error::Stdin)?;
         yes_no.make_ascii_lowercase();
     }
 }
@@ -285,5 +284,5 @@ pub fn commit_config<P: AsRef<Path>>(
     let mut config_file = util::create_file(&config_path)?;
 
     serde_json::to_writer_pretty(&mut config_file, config)
-        .map_err(Error::SerializeError)
+        .map_err(Error::Serialize)
 }

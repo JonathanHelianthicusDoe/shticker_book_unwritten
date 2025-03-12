@@ -2,7 +2,6 @@
 use crate::keyring::{get_saved_password, save_password};
 use crate::{config::Config, error::Error};
 use reqwest::{blocking as rb, header};
-use rpassword;
 use serde::Serialize;
 use std::{
     collections::BTreeMap,
@@ -72,7 +71,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
                     println!("Using saved password...");
                 }
 
-                handle_name_and_pw(
+                if let Some(c) = handle_name_and_pw(
                     config,
                     config_path.as_ref(),
                     client,
@@ -80,32 +79,33 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
                     no_save,
                     username.to_owned(),
                     password,
-                )?
-                .map(|c| children.push(c));
+                )? {
+                    children.push(c)
+                }
             } else {
                 print!("Password for {}: ", username);
-                io::stdout().flush().map_err(Error::StdoutError)?;
+                io::stdout().flush().map_err(Error::Stdout)?;
 
-                handle_name_and_pw(
+                if let Some(c) = handle_name_and_pw(
                     config,
                     config_path.as_ref(),
                     client,
                     quiet,
                     no_save,
                     username.to_owned(),
-                    rpassword::read_password()
-                        .map_err(Error::PasswordReadError)?,
-                )?
-                .map(|c| children.push(c));
+                    rpassword::read_password().map_err(Error::PasswordRead)?,
+                )? {
+                    children.push(c)
+                }
             }
         }
     } else {
         print!("Username: ");
-        io::stdout().flush().map_err(Error::StdoutError)?;
+        io::stdout().flush().map_err(Error::Stdout)?;
         username_buf.reserve(0x10);
         io::stdin()
             .read_line(&mut username_buf)
-            .map_err(Error::StdinError)?;
+            .map_err(Error::Stdin)?;
         username_buf.truncate(username_buf.trim_end().len());
 
         let password = if let Some(password) =
@@ -118,12 +118,12 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
             password
         } else {
             print!("Password for {}: ", username_buf);
-            io::stdout().flush().map_err(Error::StdoutError)?;
+            io::stdout().flush().map_err(Error::Stdout)?;
 
-            rpassword::read_password().map_err(Error::PasswordReadError)?
+            rpassword::read_password().map_err(Error::PasswordRead)?
         };
 
-        handle_name_and_pw(
+        if let Some(c) = handle_name_and_pw(
             config,
             config_path,
             client,
@@ -131,8 +131,9 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
             no_save,
             username_buf,
             password,
-        )?
-        .map(|c| children.push(c));
+        )? {
+            children.push(c)
+        }
     }
 
     Ok(())
@@ -299,11 +300,11 @@ fn do_2fa(
                 "Expected \"banner\" key with String value",
             ))?,
     );
-    io::stdout().flush().map_err(Error::StdoutError)?;
+    io::stdout().flush().map_err(Error::Stdout)?;
     let mut app_token = String::with_capacity(0x10);
     io::stdin()
         .read_line(&mut app_token)
-        .map_err(Error::StdinError)?;
+        .map_err(Error::Stdin)?;
     app_token.truncate(app_token.trim_end().len());
 
     if app_token == "cancel" {
@@ -389,11 +390,11 @@ fn post_to_login_api<K: Ord + Serialize, V: Serialize>(
             .header(header::ACCEPT, "text/plain")
             .form(&params)
             .send()
-            .map_err(Error::PostError)?
+            .map_err(Error::Post)?
             .text()
-            .map_err(Error::PostError)?,
+            .map_err(Error::Post)?,
     )
-    .map_err(Error::DeserializeError)
+    .map_err(Error::Deserialize)
 }
 
 fn launch<S: AsRef<OsStr>, T: AsRef<OsStr>>(
@@ -432,7 +433,7 @@ fn launch<S: AsRef<OsStr>, T: AsRef<OsStr>>(
         command_buf
     };
 
-    process::Command::new(&command_text)
+    process::Command::new(command_text)
         .current_dir(&config.install_dir)
         .env("TTR_PLAYCOOKIE", play_cookie)
         .env("TTR_GAMESERVER", game_server)
@@ -440,5 +441,5 @@ fn launch<S: AsRef<OsStr>, T: AsRef<OsStr>>(
         .stdout(process::Stdio::null())
         .stderr(process::Stdio::null())
         .spawn()
-        .map_err(Error::ThreadSpawnError)
+        .map_err(Error::ThreadSpawn)
 }

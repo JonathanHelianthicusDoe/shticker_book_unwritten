@@ -8,7 +8,7 @@ pub fn open_file<P: AsRef<Path>>(path: P) -> Result<File, Error> {
             ioe,
         ),
         _ => {
-            Error::UnknownIoError(format!("opening {:?}", path.as_ref()), ioe)
+            Error::UnknownIo(format!("opening {:?}", path.as_ref()), ioe)
         }
     })
 }
@@ -20,7 +20,7 @@ pub fn create_file<P: AsRef<Path>>(path: P) -> Result<File, Error> {
             ioe,
         ),
         _ => {
-            Error::UnknownIoError(format!("creating {:?}", path.as_ref()), ioe)
+            Error::UnknownIo(format!("creating {:?}", path.as_ref()), ioe)
         }
     })
 }
