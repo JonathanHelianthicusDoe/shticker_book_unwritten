@@ -11,19 +11,18 @@ use std::{
 const HELP_TEXT: &str = "\
 Commands
 ========
-  help, ?                    Display this help text.
-  about                      Display info about this program.
-  quit, exit                 Quit this program.
-  update, up                 Update the game files. Specify -y or --dry-update
-    [-y | --dry-update]        to only check if updates are available.
-  login, play, launch        Launch TTR. Specify -n or --no-save to not save
-    [usernames...]             logins, even if successful.
-    [-n | --no-save]
-  instances, running         List currently running TTR instances.
-  kill, close <instance>     Forcibly close a running TTR instance. The
-                               instance is specified by its PID or by its
-                               username.
-  accounts, logins           List all saved accounts/logins.
+help, ?                    Display this help text.
+about                      Display info about this program.
+quit, exit                 Quit this program.
+update, up                 Update the game files. Specify -y or --dry-update to
+  [-y | --dry-update]        only check whether updates are available.
+login, play, launch        Launch the game. Specify -n or --no-save to not save
+  [usernames...]             logins, even if successful.
+  [-n | --no-save]
+instances, running         List currently running game instances.
+kill, close <instance>     Forcibly close a running game instance. The instance
+                             is specified by its PID or by its username.
+accounts, logins           List all saved accounts/logins.
 ";
 const ABOUT_TEXT: &str = concat!(
     crate_name!(),
@@ -105,12 +104,12 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                     break;
                 } else if children.len() == 1 {
                     print!(
-                        "Are you sure are you want to exit? There's still a \
+                        "Are you sure that you want to exit? There's still a \
                          game instance running. [y/n]\n> ",
                     );
                 } else {
                     print!(
-                        "Are you sure are you want to exit? There are still \
+                        "Are you sure that you want to exit? There are still \
                          {} game instances running. [y/n]\n> ",
                         children.len(),
                     );
@@ -145,7 +144,7 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                     match arg {
                         "-y" | "--dry-update" => dry = true,
                         _ => {
-                            println!("Unexpected argument: {}", arg);
+                            println!("Unexpected argument: {arg}");
 
                             continue 'outer;
                         }
@@ -156,13 +155,13 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                     update::update(config, client, quiet, max_tries, dry)?
                 } else if children.len() == 1 {
                     println!(
-                        "There's still a game instance running, can't \
+                        "There's still a game instance running; can't \
                              update now!\n(Pass in -y or --dry-update if you \
                              just want to check for updates.)",
                     );
                 } else {
                     println!(
-                        "There are still {} game instances running, \
+                        "There are still {} game instances running; \
                              can't update now!\n(Pass in -y or --dry-update \
                              if you just want to check for updates.)",
                         children.len(),
@@ -262,8 +261,8 @@ fn display_instances(instances: &[(String, process::Child, time::Instant)]) {
     for _ in 0..max_name_len.saturating_sub("username".len()) {
         print!(" ");
     }
-    print!("| pid ");
-    for _ in 0..max_pid_len.saturating_sub("pid".len()) {
+    print!("| PID ");
+    for _ in 0..max_pid_len.saturating_sub("PID".len()) {
         print!(" ");
     }
     print!("| uptime\n---------");
@@ -271,19 +270,19 @@ fn display_instances(instances: &[(String, process::Child, time::Instant)]) {
         print!("-");
     }
     print!("+-----");
-    for _ in 0..max_pid_len.saturating_sub("pid".len()) {
+    for _ in 0..max_pid_len.saturating_sub("PID".len()) {
         print!("-");
     }
     println!("+-----------");
     for (name, child, timestamp) in instances {
         let pid = child.id();
 
-        print!("{} ", name);
+        print!("{name} ");
         for _ in 0..max_name_len - name.len() {
             print!(" ");
         }
 
-        print!("| {} ", pid);
+        print!("| {pid} ");
         for _ in 0..max_pid_len - count_decimal_digits(pid) {
             print!(" ");
         }
@@ -292,7 +291,7 @@ fn display_instances(instances: &[(String, process::Child, time::Instant)]) {
         let secs = uptime_sec % 60;
         let minutes = (uptime_sec / 60) % 60;
         let hours = uptime_sec / (60 * 60);
-        println!("| {}h {:02}m {:02}s", hours, minutes, secs);
+        println!("| {hours}h {minutes:02}m {secs:02}s");
     }
 }
 
@@ -351,22 +350,19 @@ fn kill_instance(
         child.wait().map_err(Error::ThreadJoin)?;
 
         if !quiet {
-            println!(
-                "Successfully killed {}'s instance with pid {},",
-                name, pid,
-            );
+            println!("Successfully killed {name}'s instance with PID {pid},");
             let secs = uptime_sec % 60;
             let minutes = (uptime_sec / 60) % 60;
             let hours = uptime_sec / (60 * 60);
             println!(
-                "which had an approximate uptime of {}h {:02}m {:02}s.",
-                hours, minutes, secs,
+                "which had an approximate uptime of {hours}h {minutes:02}m \
+                 {secs:02}s."
             );
         }
 
         children.remove(i);
     } else {
-        println!("No currently running instances have that username or pid.");
+        println!("No currently-running instances have that username or PID.");
     }
 
     Ok(())
@@ -400,13 +396,12 @@ fn display_accounts(
 
     for (username, saved_password) in accounts {
         print!(
-            "{} {}   ",
+            "{} {username}   ",
             if children.iter().any(|(un, _, _)| un == username) {
                 '*'
             } else {
                 ' '
             },
-            username,
         );
         for _ in 0..max_name_len - username.len() {
             print!(" ");
@@ -430,17 +425,14 @@ fn check_children(
         {
             if !quiet {
                 if exit_status.success() {
-                    println!("{}'s instance exited normally.", username);
+                    println!("{username}'s instance exited normally.");
                 } else if let Some(exit_code) = exit_status.code() {
                     println!(
-                        "{}'s instance exited abnormally. Exit code: {}",
-                        username, exit_code,
+                        "{username}'s instance exited abnormally. Exit code: \
+                         {exit_code}"
                     );
                 } else {
-                    println!(
-                        "{}'s instance was killed by a signal.",
-                        username,
-                    );
+                    println!("{username}'s instance was killed by a signal.");
                 }
             }
 

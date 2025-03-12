@@ -187,7 +187,7 @@ impl fmt::Display for Error {
             Self::HashMismatch(path, expected) => {
                 write!(
                     f,
-                    "SHA1 hash of local file {:?} did not match manifest's \
+                    "SHA-1 hash of local file {:?} did not match manifest's \
                      hash of ",
                     path,
                 )?;

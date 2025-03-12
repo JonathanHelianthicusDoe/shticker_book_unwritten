@@ -83,7 +83,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
                     children.push(c)
                 }
             } else {
-                print!("Password for {}: ", username);
+                print!("Password for {username}: ");
                 io::stdout().flush().map_err(Error::Stdout)?;
 
                 if let Some(c) = handle_name_and_pw(
@@ -117,7 +117,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
 
             password
         } else {
-            print!("Password for {}: ", username_buf);
+            print!("Password for {username_buf}: ");
             io::stdout().flush().map_err(Error::Stdout)?;
 
             rpassword::read_password().map_err(Error::PasswordRead)?
@@ -335,8 +335,7 @@ fn enqueue(
         ))?;
     if !quiet {
         println!(
-            "Waiting in queue... ETA: {}, position in line: {}",
-            eta,
+            "Waiting in queue... ETA: {eta}, position in line: {}",
             response_json
                 .get("position")
                 .and_then(|val| match val {

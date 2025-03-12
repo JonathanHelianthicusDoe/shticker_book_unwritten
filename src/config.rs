@@ -241,9 +241,7 @@ fn prompt_for_config_values<P: AsRef<Path>>(
     );
     io::stdout().flush().map_err(Error::Stdout)?;
     let mut yes_no = String::with_capacity(4);
-    io::stdin()
-        .read_line(&mut yes_no)
-        .map_err(Error::Stdin)?;
+    io::stdin().read_line(&mut yes_no).map_err(Error::Stdin)?;
     yes_no.make_ascii_lowercase();
     loop {
         let yes_no_trimmed = yes_no.as_str().trim();
@@ -269,9 +267,7 @@ fn prompt_for_config_values<P: AsRef<Path>>(
         print!("Please enter \"yes\" or \"no\" (without quotes):\n> ");
         io::stdout().flush().map_err(Error::Stdout)?;
         yes_no.clear();
-        io::stdin()
-            .read_line(&mut yes_no)
-            .map_err(Error::Stdin)?;
+        io::stdin().read_line(&mut yes_no).map_err(Error::Stdin)?;
         yes_no.make_ascii_lowercase();
     }
 }

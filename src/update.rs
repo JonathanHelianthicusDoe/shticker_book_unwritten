@@ -48,10 +48,9 @@ pub fn update(
     for (i, (file_name, file_obj)) in manifest_map.iter().enumerate() {
         if !quiet {
             println!(
-                "[{:2}/{}] Checking for updates for {}",
+                "[{:2}/{}] Checking for updates for {file_name}",
                 i + 1,
                 manifest_map.len(),
-                file_name,
             );
         }
 
@@ -124,7 +123,7 @@ pub fn update(
                             continue;
                         } else {
                             println!(
-                                "        File doesn't exist, downloading \
+                                "        File doesn't exist; downloading \
                                  from scratch..."
                             );
                         }
@@ -236,7 +235,7 @@ pub fn update(
         const EXE_NAME: &str = "Toontown Rewritten";
 
         if !quiet {
-            println!("Making sure {} is executable...", EXE_NAME);
+            println!("Making sure {EXE_NAME} is executable...");
         }
 
         install_dir.push(EXE_NAME);
@@ -257,8 +256,7 @@ pub fn update(
         if (ttrengine_mode & 0o100) == 0 {
             if !quiet {
                 println!(
-                    "{} isn't executable, setting executable bit...",
-                    EXE_NAME,
+                    "{EXE_NAME} isn't executable; setting executable bit..."
                 );
             }
 
@@ -267,10 +265,10 @@ pub fn update(
                 .map_err(|ioe| Error::PermissionsSet(install_dir, ioe))?;
 
             if !quiet {
-                println!("{} is now executable!", EXE_NAME);
+                println!("{EXE_NAME} is now executable!");
             }
         } else if !quiet {
-            println!("{} is already executable!", EXE_NAME);
+            println!("{EXE_NAME} is already executable!");
         }
     }
 
@@ -290,7 +288,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
     full_file_path: P,
 ) -> Result<(), Error> {
     if !quiet {
-        println!("        File exists, checking SHA1 hash...");
+        println!("        File exists; checking SHA-1 hash...");
     }
 
     let mut file_buf = [0u8; BUFFER_SIZE];
@@ -315,20 +313,20 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
 
     if initial_sha == manifest_sha {
         if !quiet {
-            println!("        SHA1 hash matches!");
+            println!("        SHA-1 hash matches!");
         }
 
         return Ok(());
     }
 
     if !quiet {
-        print!("        SHA1 hash mismatch:\n          Local:    ");
+        print!("        SHA-1 hash mismatch:\n          Local:    ");
         for b in initial_sha.iter() {
-            print!("{:02x}", b);
+            print!("{b:02x}");
         }
         print!("\n          Manifest: ");
         for b in manifest_sha.iter() {
-            print!("{:02x}", b);
+            print!("{b:02x}");
         }
         println!("\n        Checking for a patch...");
     }
@@ -454,7 +452,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
                 return Ok(());
             } else {
                 println!(
-                    "        No patches found, downloading from scratch..."
+                    "        No patches found; downloading from scratch..."
                 );
             }
         }
@@ -510,19 +508,18 @@ fn get_manifest(
     for i in 1..=max_tries.get() {
         let mut handle_retry = |e| {
             eprintln!(
-                "{}{}",
-                e,
+                "{e}{}",
                 if i < max_tries.get() {
-                    ", retrying..."
+                    "; retrying..."
                 } else {
-                    ", no more attempts remaining!"
+                    "; no more attempts remaining!"
                 },
             );
             last_err = Some(e);
         };
 
         if !quiet {
-            println!("Downloading manifest [attempt {}/{}]...", i, max_tries);
+            println!("Downloading manifest [attempt {i}/{max_tries}]...");
         }
 
         let manifest_resp = match client
@@ -608,7 +605,7 @@ fn sha_from_hash_str<S: AsRef<str>>(hash_str: S) -> Result<[u8; 20], Error> {
             b'f' | b'F' => 0x0f,
             _ => {
                 return Err(Error::BadManifestFormat(format!(
-                    "Unexpected character in SHA1 hash string: {:?}",
+                    "Unexpected character in SHA-1 hash string: {:?}",
                     b as char,
                 )))
             }
@@ -668,12 +665,11 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
     for i in 1..=max_tries.get() {
         let mut handle_retry = |e| {
             eprintln!(
-                "        {}{}",
-                e,
+                "        {e}{}",
                 if i < max_tries.get() {
-                    ", retrying..."
+                    "; retrying..."
                 } else {
-                    ", no more attempts remaining!"
+                    "; no more attempts remaining!"
                 },
             );
             last_err = Some(e);
@@ -681,10 +677,8 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
 
         if !quiet {
             println!(
-                "        Downloading {} [attempt {}/{}]",
+                "        Downloading {} [attempt {i}/{max_tries}]",
                 compressed_file_name.as_ref(),
-                i,
-                max_tries,
             );
         }
 
@@ -712,7 +706,7 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
 
         if !quiet {
             println!(
-                "        Checking SHA1 hash of {}",
+                "        Checking SHA-1 hash of {}",
                 compressed_file_name.as_ref(),
             );
         }
@@ -720,15 +714,15 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         let dled_sha = sha_of_file_by_path(&compressed_file_path, buf)?;
         if &dled_sha != compressed_sha {
             if !quiet {
-                eprint!("        SHA1 hash mismatch:\n          Local:    ");
+                eprint!("        SHA-1 hash mismatch:\n          Local:    ");
                 for b in dled_sha.iter() {
-                    eprint!("{:02x}", b);
+                    eprint!("{b:02x}");
                 }
                 eprint!("\n          Manifest: ");
                 for b in compressed_sha.iter() {
-                    eprint!("{:02x}", b);
+                    eprint!("{b:02x}");
                 }
-                eprintln!("\n        Re-downloading...");
+                eprintln!("\n        Redownloading...");
             }
 
             last_err = Some(Error::HashMismatch(
@@ -740,27 +734,27 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         }
 
         if !quiet {
-            println!("        SHA1 hash matches! Extracting...");
+            println!("        SHA-1 hash matches! Extracting...");
         }
 
         decompress_file(buf, &compressed_file_path, &decompressed_file_path)?;
 
         if !quiet {
-            println!("        Checking SHA1 hash of extracted file...");
+            println!("        Checking SHA-1 hash of extracted file...");
         }
 
         let extracted_sha = sha_of_file_by_path(&decompressed_file_path, buf)?;
         if &extracted_sha != decompressed_sha {
             if !quiet {
-                eprint!("        SHA1 hash mismatch:\n          Local:    ");
+                eprint!("        SHA-1 hash mismatch:\n          Local:    ");
                 for b in extracted_sha.iter() {
-                    eprint!("{:02x}", b);
+                    eprint!("{b:02x}");
                 }
                 eprint!("\n          Manifest: ");
                 for b in decompressed_sha.iter() {
-                    eprint!("{:02x}", b);
+                    eprint!("{b:02x}");
                 }
-                eprintln!("\n        Re-downloading...");
+                eprintln!("\n        Redownloading...");
             }
 
             last_err = Some(Error::HashMismatch(
@@ -772,7 +766,7 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         }
 
         if !quiet {
-            println!("        SHA1 hash matches!");
+            println!("        SHA-1 hash matches!");
         }
 
         last_err = None;
