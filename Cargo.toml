@@ -2,7 +2,7 @@
 name = "shticker_book_unwritten"
 version = "1.3.0"
 authors = ["Dr. Jonathan Helianthicus Doe, IV <augiii@protonmail.com>"]
-edition = "2021"
+edition = "2024"
 description = "Minimal CLI launcher for the Toontown Rewritten MMORPG"
 repository = """
 https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten"""

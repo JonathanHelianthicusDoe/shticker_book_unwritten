@@ -41,7 +41,7 @@ use bzip2::read::BzDecoder as BzReadDecoder;
 use std::{
     self,
     ffi::{OsStr, OsString},
-    io::{prelude::*, Seek, SeekFrom},
+    io::{Seek, SeekFrom, prelude::*},
     path::Path,
 };
 

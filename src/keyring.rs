@@ -1,7 +1,7 @@
 #![cfg(all(target_os = "linux", feature = "secret-store"))]
 
 use crate::{config::Config, error::Error};
-use secret_service::{blocking::SecretService, EncryptionType};
+use secret_service::{EncryptionType, blocking::SecretService};
 use std::{collections::HashMap, path::Path};
 
 const APP_ID: &str = "app_id";

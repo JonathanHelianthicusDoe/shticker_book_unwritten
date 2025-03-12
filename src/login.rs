@@ -263,7 +263,7 @@ fn handle_login_negotiation(
                 return Ok(None);
             }
             _ => {
-                return Err(Error::UnexpectedSuccessValue(success.to_owned()))
+                return Err(Error::UnexpectedSuccessValue(success.to_owned()));
             }
         }
     }

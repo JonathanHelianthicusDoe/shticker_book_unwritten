@@ -36,7 +36,7 @@ pub fn update(
         _ => {
             return Err(Error::BadManifestFormat(
                 "Top-level value is not an Object".to_owned(),
-            ))
+            ));
         }
     };
 
@@ -69,7 +69,7 @@ pub fn update(
             _ => {
                 return Err(Error::BadManifestFormat(
                     "Expected \"only\"'s value to be an Array".to_owned(),
-                ))
+                ));
             }
         };
         let mut supported_by_this_arch = false;
@@ -86,7 +86,7 @@ pub fn update(
                     return Err(Error::BadManifestFormat(
                         "Expected OS & architecture values to be Strings"
                             .to_owned(),
-                    ))
+                    ));
                 }
             }
         }
@@ -194,13 +194,13 @@ pub fn update(
                     return Err(Error::PermissionDenied(
                         format!("opening {:?}", install_dir),
                         ioe,
-                    ))
+                    ));
                 }
                 _ => {
                     return Err(Error::UnknownIo(
                         format!("opening {:?}", install_dir),
                         ioe,
-                    ))
+                    ));
                 }
             },
         };
@@ -302,12 +302,12 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
         Some(_) => {
             return Err(Error::BadManifestFormat(
                 "Value of \"hash\" was not a String".to_owned(),
-            ))
+            ));
         }
         _ => {
             return Err(Error::BadManifestFormat(
                 "\"hash\" key missing".to_owned(),
-            ))
+            ));
         }
     })?;
 
@@ -356,7 +356,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
             _ => {
                 return Err(Error::BadManifestFormat(
                     "Expected \"patches\" to be objects".to_owned(),
-                ))
+                ));
             }
         };
 
@@ -607,7 +607,7 @@ fn sha_from_hash_str<S: AsRef<str>>(hash_str: S) -> Result<[u8; 20], Error> {
                 return Err(Error::BadManifestFormat(format!(
                     "Unexpected character in SHA-1 hash string: {:?}",
                     b as char,
-                )))
+                )));
             }
         };
 

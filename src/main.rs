@@ -11,9 +11,9 @@ mod update;
 mod util;
 
 use clap::{
+    Arg, ArgAction, Command,
     builder::{ArgPredicate, ValueParser},
     crate_authors, crate_description, crate_name, crate_version, value_parser,
-    Arg, ArgAction, Command,
 };
 use error::Error;
 use reqwest::blocking as rb;

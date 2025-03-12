@@ -233,11 +233,7 @@ fn display_instances(instances: &[(String, process::Child, time::Instant)]) {
                 6
             }
         } else if n >= 1_000 {
-            if n >= 10_000 {
-                5
-            } else {
-                4
-            }
+            if n >= 10_000 { 5 } else { 4 }
         } else if n >= 100 {
             3
         } else if n >= 10 {
