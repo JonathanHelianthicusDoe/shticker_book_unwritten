@@ -4,6 +4,7 @@
 mod command;
 mod config;
 mod error;
+mod keyring;
 mod login;
 mod patch;
 mod update;

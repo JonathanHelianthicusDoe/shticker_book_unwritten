@@ -43,6 +43,16 @@ pub enum Error {
     ThreadJoinError(io::Error),
     ProcessKillError(u32, io::Error),
     HashMismatch(PathBuf, [u8; 20]),
+    #[cfg(all(target_os = "linux", feature = "secret-store"))]
+    SessionStoreConnectError(secret_service::Error),
+    #[cfg(all(target_os = "linux", feature = "secret-store"))]
+    PasswordUnlockError(secret_service::Error),
+    #[cfg(all(target_os = "linux", feature = "secret-store"))]
+    PasswordGetError(secret_service::Error),
+    #[cfg(all(target_os = "linux", feature = "secret-store"))]
+    PasswordUtf8Error(std::string::FromUtf8Error),
+    #[cfg(all(target_os = "linux", feature = "secret-store"))]
+    PasswordSaveError(secret_service::Error),
 }
 
 impl fmt::Display for Error {
@@ -189,6 +199,46 @@ impl fmt::Display for Error {
 
                 Ok(())
             }
+            #[cfg(all(target_os = "linux", feature = "secret-store"))]
+            Self::SessionStoreConnectError(error) => {
+                write!(
+                    f,
+                    "Failed to connect to session password store:\n\t{}",
+                    error
+                )
+            }
+            #[cfg(all(target_os = "linux", feature = "secret-store"))]
+            Self::PasswordUnlockError(error) => {
+                write!(
+                    f,
+                    "Could not unlock password from session store:\n\t{}",
+                    error
+                )
+            }
+            #[cfg(all(target_os = "linux", feature = "secret-store"))]
+            Self::PasswordGetError(error) => {
+                write!(
+                    f,
+                    "Failed to get password from secret store:\n\t{}",
+                    error
+                )
+            }
+            #[cfg(all(target_os = "linux", feature = "secret-store"))]
+            Self::PasswordUtf8Error(error) => {
+                write!(
+                    f,
+                    "Password from session store is invalid:\n\t{}",
+                    error
+                )
+            }
+            #[cfg(all(target_os = "linux", feature = "secret-store"))]
+            Self::PasswordSaveError(error) => {
+                write!(
+                    f,
+                    "Failed to save password in session store:\n\t{}",
+                    error
+                )
+            }
         }
     }
 }
@@ -235,6 +285,16 @@ impl Error {
             Self::ThreadJoinError(_) => 35,
             Self::ProcessKillError(_, _) => 36,
             Self::HashMismatch(_, _) => 37,
+            #[cfg(all(target_os = "linux", feature = "secret-store"))]
+            Self::SessionStoreConnectError(_) => 38,
+            #[cfg(all(target_os = "linux", feature = "secret-store"))]
+            Self::PasswordUnlockError(_) => 39,
+            #[cfg(all(target_os = "linux", feature = "secret-store"))]
+            Self::PasswordGetError(_) => 40,
+            #[cfg(all(target_os = "linux", feature = "secret-store"))]
+            Self::PasswordUtf8Error(_) => 41,
+            #[cfg(all(target_os = "linux", feature = "secret-store"))]
+            Self::PasswordSaveError(_) => 42,
         }
     }
 }

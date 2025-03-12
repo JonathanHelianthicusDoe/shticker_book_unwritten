@@ -26,6 +26,7 @@ pub struct Config {
 
 impl Config {
     /// Same return type as `BTreeMap::insert`.
+    #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
     pub fn add_account(
         &mut self,
         username: String,
@@ -276,6 +277,7 @@ fn prompt_for_config_values<P: AsRef<Path>>(
     }
 }
 
+#[cfg(not(all(target_os = "linux", feature = "secret-store")))]
 pub fn commit_config<P: AsRef<Path>>(
     config: &Config,
     config_path: P,
