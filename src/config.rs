@@ -16,6 +16,7 @@ const DEFAULT_CDN_URI: &str =
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Config {
     pub install_dir: PathBuf,
+    /// TODO: Implement a way to clear the cache, presumably automatically
     pub cache_dir: PathBuf,
     pub manifest_uri: String,
     pub cdn_uri: String,
@@ -37,6 +38,10 @@ impl Config {
         } else {
             self.accounts.insert(username, serde_json::Value::Null)
         }
+    }
+
+    pub fn forget_account(&mut self, username: &str) {
+        self.accounts.remove(username);
     }
 }
 
@@ -244,7 +249,7 @@ fn prompt_for_config_values<P: AsRef<Path>>(
     io::stdin().read_line(&mut yes_no).map_err(Error::Stdin)?;
     yes_no.make_ascii_lowercase();
     loop {
-        let yes_no_trimmed = yes_no.as_str().trim();
+        let yes_no_trimmed = yes_no.trim();
         if yes_no_trimmed == "yes" || yes_no_trimmed == "no" {
             println!();
 
@@ -264,7 +269,7 @@ fn prompt_for_config_values<P: AsRef<Path>>(
             });
         }
 
-        print!("Please enter \"yes\" or \"no\" (without quotes):\n> ");
+        print!("Please enter yes or no:\n> ");
         io::stdout().flush().map_err(Error::Stdout)?;
         yes_no.clear();
         io::stdin().read_line(&mut yes_no).map_err(Error::Stdin)?;
@@ -272,7 +277,7 @@ fn prompt_for_config_values<P: AsRef<Path>>(
     }
 }
 
-#[cfg(not(all(target_os = "linux", feature = "secret-store")))]
+/// TODO: Write to a temporary file before replacing the old config
 pub fn commit_config<P: AsRef<Path>>(
     config: &Config,
     config_path: P,

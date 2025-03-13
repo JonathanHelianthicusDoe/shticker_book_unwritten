@@ -26,7 +26,7 @@ inputs).
 
 You can get pre-compiled binaries from [the releases page][releases] on GitHub.
 
-### From [crates.io](https://crates.io/)
+### From [crates\.io](https://crates.io/)
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
 can get from [rustup](https://rustup.rs/). The minimum supported version of

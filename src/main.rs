@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 #![deny(deprecated)]
 
+mod accounts;
 mod command;
 mod config;
 mod error;

@@ -1,4 +1,4 @@
-use crate::{config::Config, error::Error, login, update};
+use crate::{accounts, config::Config, error::Error, login, update};
 use clap::{crate_name, crate_version};
 use reqwest::blocking as rb;
 use std::{
@@ -22,7 +22,18 @@ login, play, launch        Launch the game. Specify -n or --no-save to not save
 instances, running         List currently running game instances.
 kill, close <instance>     Forcibly close a running game instance. The instance
                              is specified by its PID or by its username.
-accounts, logins           List all saved accounts/logins.
+accounts, logins           List all saved accounts/logins. Use the help
+                             subcommand for info on account-management
+                             subcommands.
+";
+const ACCOUNTS_HELP_TEXT: &str = "\
+Account-management subcommands
+==============================
+accounts forget     Forget the specified account, erasing its username &
+  [username]          password from the config and from the Secret Service
+                      keyring, where applicable.
+accounts setpw      Set the password for the specified account.
+  [username]
 ";
 const ABOUT_TEXT: &str = concat!(
     crate_name!(),
@@ -155,15 +166,15 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                     update::update(config, client, quiet, max_tries, dry)?
                 } else if children.len() == 1 {
                     println!(
-                        "There's still a game instance running; can't \
-                             update now!\n(Pass in -y or --dry-update if you \
-                             just want to check for updates.)",
+                        "There's still a game instance running; can't update \
+                         now!\n(Pass in -y or --dry-update if you just want \
+                         to check for updates.)",
                     );
                 } else {
                     println!(
-                        "There are still {} game instances running; \
-                             can't update now!\n(Pass in -y or --dry-update \
-                             if you just want to check for updates.)",
+                        "There are still {} game instances running; can't \
+                         update now!\n(Pass in -y or --dry-update if you just \
+                         want to check for updates.)",
                         children.len(),
                     );
                 }
@@ -189,7 +200,21 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
             }
             Some("accounts") | Some("logins") => {
                 check_children(quiet, &mut children)?;
-                display_accounts(config, &children)?;
+                match argv.next() {
+                    None => display_accounts(config, &children)?,
+                    Some("help") | Some("?") => accounts_help(),
+                    Some("forget") => accounts::forget_account(
+                        config,
+                        &config_path,
+                        quiet,
+                        argv.next(),
+                    )?,
+                    Some("setpw") => todo!(),
+                    _ => println!(
+                        "Unrecognized accounts subcommand.\nType accounts \
+                         help or accounts ? to get a list of subcommands."
+                    ),
+                }
             }
             _ => {
                 check_children(quiet, &mut children)?;
@@ -205,11 +230,15 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
 }
 
 fn help() {
-    print!("{}", HELP_TEXT);
+    print!("{HELP_TEXT}");
+}
+
+fn accounts_help() {
+    print!("{ACCOUNTS_HELP_TEXT}");
 }
 
 fn about() {
-    print!("{}", ABOUT_TEXT);
+    print!("{ABOUT_TEXT}");
 }
 
 fn display_instances(instances: &[(String, process::Child, time::Instant)]) {

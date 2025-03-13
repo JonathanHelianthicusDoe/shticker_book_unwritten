@@ -51,6 +51,8 @@ pub enum Error {
     PasswordUtf8(std::string::FromUtf8Error),
     #[cfg(all(target_os = "linux", feature = "secret-store"))]
     PasswordSave(secret_service::Error),
+    #[cfg(all(target_os = "linux", feature = "secret-store"))]
+    DeleteSecretItem(secret_service::Error),
 }
 
 impl fmt::Display for Error {
@@ -237,6 +239,12 @@ impl fmt::Display for Error {
                     error
                 )
             }
+            #[cfg(all(target_os = "linux", feature = "secret-store"))]
+            Self::DeleteSecretItem(error) => write!(
+                f,
+                "Failed to delete item in secret store:\n\t{}",
+                error
+            ),
         }
     }
 }
@@ -293,6 +301,8 @@ impl Error {
             Self::PasswordUtf8(_) => 41,
             #[cfg(all(target_os = "linux", feature = "secret-store"))]
             Self::PasswordSave(_) => 42,
+            #[cfg(all(target_os = "linux", feature = "secret-store"))]
+            Self::DeleteSecretItem(_) => 43,
         }
     }
 }
