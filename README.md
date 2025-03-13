@@ -93,10 +93,6 @@ license, at the licensee&rsquo;s option). For the relevant legal text, see the
 [![GNU GPL v3+](https://www.gnu.org/graphics/gplv3-or-later.png
 "GNU GPL v3+")](https://www.gnu.org/licenses/gpl-3.0.html)
 
-Versions of shticker\_book\_unwritten prior to 1.0.0 were licensed under the
-terms of the [GNU Affero General Public License, version
-3](https://www.gnu.org/licenses/agpl-3.0.html) or later.
-
 This work contains ([Rust](https://www.rust-lang.org/)-ified) code from [bsdiff
 4.3](http://www.daemonology.net/bsdiff/), which is licensed under a slightly
 modified version of [the FreeBSD
@@ -113,11 +109,9 @@ the [img/LICENSE.imgs](img/LICENSE.imgs) file for a plaintext version.
 [![CC BY-SA 4.0+](https://i.creativecommons.org/l/by-sa/4.0/88x31.png
 "CC BY-SA 4.0+")](https://creativecommons.org/licenses/by-sa/4.0/)
 
-shticker\_book\_unwritten uses [cargo-deny][cargo-deny] to enforce
-[free](https://en.wikipedia.org/wiki/Free_software)ness of licenses, and
-license compatibility with all transitive dependencies. The configuration for
-this is in the [deny.toml](./deny.toml) file. You can replicate the check
-yourself with `cargo deny check all`.
+<small>Versions of shticker\_book\_unwritten prior to 1.0.0 were licensed under
+the terms of the [GNU Affero General Public License, version
+3](https://www.gnu.org/licenses/agpl-3.0.html) or later.</small>
 
 [mmorpg]: https://en.wikipedia.org/wiki/Massively_multiplayer_online_role-playing_game
 [releases]: https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten/releases
