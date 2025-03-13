@@ -226,8 +226,8 @@ fn prompt_for_config_values<P: AsRef<Path>>(
 ) -> Result<Config, Error> {
     print!(
         "No configuration file was found at {}\nAnswer a few prompts, and a \
-         new config file will be created there.\n\nFully qualified path to \
-         desired TTR installation directory\n(will be created if it doesn't \
+         new config file will be created there.\n\nFully-qualified path to \
+         desired installation directory\n(will be created if it doesn't \
          already exist):\n> ",
         config_path.as_ref().display(),
     );
@@ -237,12 +237,18 @@ fn prompt_for_config_values<P: AsRef<Path>>(
         .read_line(&mut install_dir)
         .map_err(Error::Stdin)?;
 
+    #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
     print!(
         "\nDo you want passwords for your accounts to be stored in the \
-         config file? [yes/no]\nThe passwords will be stored IN PLAIN TEXT, \
+         config file? <yes | no>\nThe passwords will be stored IN PLAIN TEXT, \
          so if you want your passwords to be managed without storing them on \
-         your hard drive in plain text, you will have to use a separate \
+         your filesystem in plain text, then you'll have to use a separate \
          password manager app:\n> "
+    );
+    #[cfg(all(target_os = "linux", feature = "secret-store"))]
+    print!(
+        "\nDo you want passwords for your accounts to be stored on your \
+         default Secret Service keyring? <yes | no>\n> "
     );
     io::stdout().flush().map_err(Error::Stdout)?;
     let mut yes_no = String::with_capacity(4);

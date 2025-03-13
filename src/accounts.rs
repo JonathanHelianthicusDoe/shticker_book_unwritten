@@ -50,15 +50,15 @@ pub(crate) fn forget_account<P: AsRef<Path>>(
     #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
     print!(
         "Are you absolutely certain that you want to forget the account with \
-         username\n{username}?\nThis will ERASE the username & its associated \
-         password from\nyour config file.\n\
+         username {username}?\nThis will ERASE the username & its associated \
+         password from your config file.\n\
          Type yes to confirm:\n> "
     );
     #[cfg(all(target_os = "linux", feature = "secret-store"))]
     print!(
         "Are you absolutely certain that you want to forget the account with \
-         username\n{username}?\nThis will ERASE the username & its associated \
-         password from\nboth your config file & your Secret Service keyring.\n\
+         username {username}?\nThis will ERASE the username & its associated \
+         password from both your config file & your Secret Service keyring.\n\
          Type yes to confirm:\n> "
     );
     io::stdout().flush().map_err(Error::Stdout)?;
