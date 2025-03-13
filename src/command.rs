@@ -32,8 +32,9 @@ Account-management subcommands
 accounts forget     Forget the specified account, erasing its username &
   [username]          password from the config and from the Secret Service
                       keyring, where applicable.
-accounts setpw      Set the password for the specified account.
-  [username]
+accounts savepws    Set the value of store_passwords in your config. Note that
+  <true | false>      setting the value to false will NOT cause any passwords
+                      to be forgotten.
 ";
 const ABOUT_TEXT: &str = concat!(
     crate_name!(),
@@ -209,7 +210,12 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                         quiet,
                         argv.next(),
                     )?,
-                    Some("setpw") => todo!(),
+                    Some("savepws") => accounts::set_store_passwords(
+                        config,
+                        &config_path,
+                        quiet,
+                        argv.next(),
+                    )?,
                     _ => println!(
                         "Unrecognized accounts subcommand.\nType accounts \
                          help or accounts ? to get a list of subcommands."

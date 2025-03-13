@@ -31,13 +31,13 @@ pub(crate) fn forget_account<P: AsRef<Path>>(
         u
     } else {
         username_buf = String::with_capacity(0x10);
-        print!("Enter the username of the account to forget:\n> ");
+        print!("Enter the username of the account to forget: ");
         io::stdout().flush().map_err(Error::Stdout)?;
         io::stdin()
             .read_line(&mut username_buf)
             .map_err(Error::Stdin)?;
 
-        &username_buf
+        username_buf.trim()
     };
 
     if !account_exists(config, username)? {
@@ -81,6 +81,43 @@ pub(crate) fn forget_account<P: AsRef<Path>>(
 
     if !quiet {
         println!("The account has been forgotten.");
+    }
+
+    Ok(())
+}
+
+pub(crate) fn set_store_passwords<P: AsRef<Path>>(
+    config: &mut Config,
+    config_path: P,
+    quiet: bool,
+    val: Option<&str>,
+) -> Result<(), Error> {
+    let value = match val {
+        Some("true") => true,
+        Some("false") => false,
+        _ => {
+            println!(
+                "store_passwords can only have a value of either true or false"
+            );
+
+            return Ok(());
+        }
+    };
+
+    config.store_passwords = value;
+    commit_config(config, &config_path)?;
+
+    if !quiet {
+        #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
+        println!(
+            "Passwords will now be stored IN PLAIN TEXT at\n{}",
+            config_path.as_ref().display()
+        );
+        #[cfg(all(target_os = "linux", feature = "secret-store"))]
+        println!(
+            "Passwords will now be stored in your default Secret Service \
+             keyring."
+        );
     }
 
     Ok(())
