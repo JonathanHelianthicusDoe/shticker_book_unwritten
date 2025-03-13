@@ -20,17 +20,21 @@ fn get_saved_password(
     config: &Config,
     username: &str,
 ) -> Result<Option<String>, Error> {
-    Ok(config
-        .accounts
-        .get(username)
-        .and_then(|val| {
-            if let serde_json::Value::String(p) = val {
-                Some(p)
-            } else {
-                None
-            }
-        })
-        .cloned())
+    Ok(if config.store_passwords {
+        config
+            .accounts
+            .get(username)
+            .and_then(|val| {
+                if let serde_json::Value::String(p) = val {
+                    Some(p)
+                } else {
+                    None
+                }
+            })
+            .cloned()
+    } else {
+        None
+    })
 }
 
 #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
@@ -54,7 +58,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
     argv: A,
     children: &mut Vec<(String, process::Child, Instant)>,
 ) -> Result<(), Error> {
-    let (mut usernames, mut no_save) = (Vec::new(), false);
+    let (mut usernames, mut no_save) = (Vec::new(), !config.store_passwords);
     for arg in argv {
         match arg {
             "-n" | "--no-save" => no_save = true,

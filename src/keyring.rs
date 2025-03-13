@@ -10,9 +10,13 @@ const SECRET_ITEM_LABEL: &str = "Toontown Credentials";
 const SECRET_ITEM_ATTRIBUTE: &str = "user";
 
 pub(super) fn get_saved_password(
-    _config: &Config,
+    config: &Config,
     username: &str,
 ) -> Result<Option<String>, Error> {
+    if !config.store_passwords {
+        return Ok(None);
+    }
+
     let secret_service = SecretService::connect(EncryptionType::Dh)
         .map_err(Error::SessionStoreConnect)?;
 
