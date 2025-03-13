@@ -52,14 +52,14 @@ pub(crate) fn forget_account<P: AsRef<Path>>(
         "Are you absolutely certain that you want to forget the account with \
          username {username}?\nThis will ERASE the username & its associated \
          password from your config file.\n\
-         Type yes to confirm:\n> "
+         Type yes to confirm: "
     );
     #[cfg(all(target_os = "linux", feature = "secret-store"))]
     print!(
         "Are you absolutely certain that you want to forget the account with \
          username {username}?\nThis will ERASE the username & its associated \
          password from both your config file & your Secret Service keyring.\n\
-         Type yes to confirm:\n> "
+         Type yes to confirm: "
     );
     io::stdout().flush().map_err(Error::Stdout)?;
     io::stdin()

@@ -164,7 +164,10 @@ fn handle_name_and_pw<P: AsRef<Path>>(
             let new_account = get_saved_password(config, &username)?.is_none();
             save_password(config, config_path, username.clone(), password)?;
             if !quiet && new_account {
+                #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
                 println!("New account saved in config!");
+                #[cfg(all(target_os = "linux", feature = "secret-store"))]
+                println!("New account saved in default keyring!");
             }
         }
 
