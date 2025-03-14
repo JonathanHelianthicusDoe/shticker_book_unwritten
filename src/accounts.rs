@@ -92,7 +92,7 @@ pub(crate) fn set_store_passwords<P: AsRef<Path>>(
     quiet: bool,
     val: Option<&str>,
 ) -> Result<(), Error> {
-    let value = match val {
+    let store_passwords = match val {
         Some("true") => true,
         Some("false") => false,
         _ => {
@@ -104,20 +104,24 @@ pub(crate) fn set_store_passwords<P: AsRef<Path>>(
         }
     };
 
-    config.store_passwords = value;
+    config.store_passwords = store_passwords;
     commit_config(config, &config_path)?;
 
     if !quiet {
-        #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
-        println!(
-            "Passwords will now be stored IN PLAIN TEXT at\n{}",
-            config_path.as_ref().display()
-        );
-        #[cfg(all(target_os = "linux", feature = "secret-store"))]
-        println!(
-            "Passwords will now be stored in your default Secret Service \
-             keyring."
-        );
+        if store_passwords {
+            #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
+            println!(
+                "Passwords will now be stored IN PLAIN TEXT at\n{}",
+                config_path.as_ref().display()
+            );
+            #[cfg(all(target_os = "linux", feature = "secret-store"))]
+            println!(
+                "Passwords will now be stored in your default Secret Service \
+                 keyring."
+            );
+        } else {
+            println!("Passwords will neither be stored nor read.");
+        }
     }
 
     Ok(())
