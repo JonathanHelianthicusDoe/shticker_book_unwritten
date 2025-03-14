@@ -32,15 +32,18 @@ Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
 can get from [rustup](https://rustup.rs/). The minimum supported version of
 rustc is 1.41.0.
 
-```bash
-cargo install shticker_book_unwritten
-```
+`cargo install` works as normal. Linux users may opt into the use of a [Secret
+Service](https://specifications.freedesktop.org/secret-service-spec/latest/)
+keyring (e\.g. [KWallet](https://en.wikipedia.org/wiki/KWallet), [GNOME
+Keyring](https://en.wikipedia.org/wiki/GNOME_Keyring), etc.) to save account
+details by enabling the relevant feature flag with `-Fsecret-store`. If
+you&rsquo;ve already a version installed, and want to replace it with the
+latest version, use `-f`.
 
-If you already have a version installed and want the latest version to replace
-it, you can run:
+Typically:
 
 ```bash
-cargo install -f shticker_book_unwritten
+cargo install -Fsecret-store -f shticker_book_unwritten
 ```
 
 ### From GitHub git repository
@@ -52,13 +55,41 @@ rustc is 1.41.0.
 ```bash
 git clone https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten.git
 cd shticker_book_unwritten
-cargo rustc --release -- -C target-cpu=native # Or just `cargo build --release`
-strip ./target/release/shticker_book_unwritten # Optional
+cargo rustc -Fsecret-store --release -- -C target-cpu=native # Or just `cargo build -Fsecret-store --release`
 ./target/release/shticker_book_unwritten --help
 ```
 
 The executable name is quite lengthy, so you will probably want to alias it (to
-`sbu` or something like that).
+`sbu`, or something like that).
+
+## Password management
+
+When not on Linux, and/or when shticker\_book\_unwritten is built with the
+default features, stored passwords are stored **in plain text** on your
+filesystem. To avoid this security hazard, you may:
+
+- &hellip;Compile with `-F secret-store`, if on Linux. In this case,
+  shticker\_book\_unwritten will use your [Secret
+  Service](https://specifications.freedesktop.org/secret-service-spec/latest/)
+  keyring (e\.g. [KWallet](https://en.wikipedia.org/wiki/KWallet), [GNOME
+  Keyring](https://en.wikipedia.org/wiki/GNOME_Keyring), etc.).
+- &hellip;Not use shticker\_book\_unwritten to store passwords, and instead use
+  a separate [password manager](https://en.wikipedia.org/wiki/Password_manager)
+  app.
+
+By default, when not provided with a config file, shticker\_book\_unwritten
+will ask you whether you want your passwords to be saved. Nonetheless, if
+you&rsquo;re uncertain, and you want to ensure that shticker\_book\_unwritten
+is not managing any of your passwords, then you may:
+
+1. Use shticker\_book\_unwritten&rsquo;s command mode to run
+   `accounts savepws false`.
+2. Use `accounts` to list all saved accounts.
+3. Use `accounts forget` for each individual account that has an associated
+   password.
+
+The above three steps may also be accomplished by manually editing your config
+file.
 
 ## Panicking
 

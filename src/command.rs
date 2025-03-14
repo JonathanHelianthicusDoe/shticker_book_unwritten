@@ -404,7 +404,7 @@ fn display_accounts(
     children: &[(String, process::Child, time::Instant)],
 ) -> Result<(), Error> {
     #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
-    let stored_accounts: Vec<String> = vec![];
+    let stored_accounts: Vec<String> = Vec::new();
     #[cfg(all(target_os = "linux", feature = "secret-store"))]
     let stored_accounts = crate::keyring::stored_accounts()?;
 
