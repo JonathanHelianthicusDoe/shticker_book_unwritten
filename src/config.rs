@@ -290,7 +290,7 @@ pub fn commit_config<P: AsRef<Path>>(
     let temp_config_path = config_path
         .as_ref()
         .parent()
-        .ok_or(Error::NoPossibleConfigPath)?
+        .ok_or_else(|| Error::BadConfigPath(config_path.as_ref().to_owned()))?
         .join(".config.json.temp");
     let mut temp_config_file = util::create_file(&temp_config_path)?;
 
