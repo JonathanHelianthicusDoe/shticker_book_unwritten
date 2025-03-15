@@ -3,7 +3,6 @@
 [![crates.io](https://img.shields.io/crates/v/shticker_book_unwritten)](https://crates.io/crates/shticker_book_unwritten)
 [![GPL v3+](https://img.shields.io/badge/license-GNU%20GPL%20v3%2B-bd0000)](./LICENSE)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
-[![minimum supported rust version 1.41.0](https://img.shields.io/badge/rustc-%3E%3D1.41.0-dea584)](https://rustup.rs/)
 [![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/JonathanHelianthicusDoe/shticker_book_unwritten)](https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten)
 
 ![shticker\_book\_unwritten logo](./img/shticker_book_unwritten_256x256.png)
@@ -29,8 +28,7 @@ You can get pre-compiled binaries from [the releases page][releases] on GitHub.
 ### From [crates\.io](https://crates.io/)
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
-can get from [rustup](https://rustup.rs/). The minimum supported version of
-rustc is 1.41.0.
+can get from [rustup](https://rustup.rs/).
 
 `cargo install` works as normal. Linux users may opt into the use of a [Secret
 Service](https://specifications.freedesktop.org/secret-service-spec/latest/)
@@ -49,8 +47,7 @@ cargo install -Fsecret-store -f shticker_book_unwritten
 ### From GitHub git repository
 
 Requires a distribution of [Rust](https://www.rust-lang.org/)/cargo, which you
-can get from [rustup](https://rustup.rs/). The minimum supported version of
-rustc is 1.41.0.
+can get from [rustup](https://rustup.rs/).
 
 ```bash
 git clone https://github.com/JonathanHelianthicusDoe/shticker_book_unwritten.git
@@ -66,9 +63,9 @@ The executable name is quite lengthy, so you will probably want to alias it (to
 
 When not on Linux, and/or when shticker\_book\_unwritten is built with the
 default features, stored passwords are stored **in plain text** on your
-filesystem. To avoid this security hazard, you may:
+filesystem. To avoid this security hazard, you may&hellip;:
 
-- &hellip;Compile with `-F secret-store`, if on Linux. In this case,
+- &hellip;Compile with `-Fsecret-store`, if on Linux. In this case,
   shticker\_book\_unwritten will use your [Secret
   Service](https://specifications.freedesktop.org/secret-service-spec/latest/)
   keyring (e\.g. [KWallet](https://en.wikipedia.org/wiki/KWallet), [GNOME
@@ -87,9 +84,6 @@ is not managing any of your passwords, then you may:
 2. Use `accounts` to list all saved accounts.
 3. Use `accounts forget` for each individual account that has an associated
    password.
-
-The above three steps may also be accomplished by manually editing your config
-file.
 
 ## Panicking
 

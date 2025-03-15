@@ -283,13 +283,23 @@ fn prompt_for_config_values<P: AsRef<Path>>(
     }
 }
 
-/// TODO: Write to a temporary file before replacing the old config
 pub fn commit_config<P: AsRef<Path>>(
     config: &Config,
     config_path: P,
 ) -> Result<(), Error> {
-    let mut config_file = util::create_file(&config_path)?;
+    let temp_config_path = config_path
+        .as_ref()
+        .parent()
+        .ok_or(Error::NoPossibleConfigPath)?
+        .join(".config.json.temp");
+    let mut temp_config_file = util::create_file(&temp_config_path)?;
 
-    serde_json::to_writer_pretty(&mut config_file, config)
-        .map_err(Error::Serialize)
+    serde_json::to_writer_pretty(&mut temp_config_file, config)
+        .map_err(Error::Serialize)?;
+    temp_config_file
+        .write_all(b"\n")
+        .map_err(|e| Error::FileWrite(temp_config_path.clone(), e))?;
+    fs::rename(&temp_config_path, config_path.as_ref()).map_err(|_| {
+        Error::FileRename(temp_config_path, config_path.as_ref().to_owned())
+    })
 }
