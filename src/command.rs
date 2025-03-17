@@ -234,10 +234,6 @@ fn about() {
 }
 
 fn display_instances(instances: &[(String, process::Child, time::Instant)]) {
-    if instances.is_empty() {
-        return;
-    }
-
     fn count_decimal_digits(n: u32) -> usize {
         if n >= 100_000 {
             if n >= 10_000_000 {
@@ -262,6 +258,10 @@ fn display_instances(instances: &[(String, process::Child, time::Instant)]) {
         } else {
             1
         }
+    }
+
+    if instances.is_empty() {
+        return;
     }
 
     let (max_name_len, max_pid_len) = instances.iter().fold(
@@ -317,9 +317,7 @@ fn kill_instance(
     children: &mut Vec<(String, process::Child, time::Instant)>,
     arg: Option<&str>,
 ) -> Result<(), Error> {
-    let instance_str = if let Some(s) = arg {
-        s
-    } else {
+    let Some(instance_str) = arg else {
         println!("Expected the <instance> argument!");
 
         return Ok(());

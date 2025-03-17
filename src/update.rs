@@ -31,13 +31,12 @@ pub fn update(
         ensure_dir(&config.cache_dir)?;
     }
 
-    let manifest_map = match get_manifest(config, client, quiet, max_tries)? {
-        serde_json::Value::Object(m) => m,
-        _ => {
-            return Err(Error::BadManifestFormat(
-                "Top-level value is not an Object".to_owned(),
-            ));
-        }
+    let serde_json::Value::Object(manifest_map) =
+        get_manifest(config, client, quiet, max_tries)?
+    else {
+        return Err(Error::BadManifestFormat(
+            "Top-level value is not an Object".to_owned(),
+        ));
     };
 
     if !quiet {
@@ -54,23 +53,20 @@ pub fn update(
             );
         }
 
-        let file_map = if let serde_json::Value::Object(m) = file_obj {
-            m
-        } else {
+        let serde_json::Value::Object(file_map) = file_obj else {
             return Err(Error::BadManifestFormat(
                 "Expected Object at 2nd-to-top level".to_owned(),
             ));
         };
 
-        let supported_archs = match file_map.get("only").ok_or_else(|| {
-            Error::BadManifestFormat("Missing the \"only\" key".to_owned())
-        })? {
-            serde_json::Value::Array(v) => v,
-            _ => {
-                return Err(Error::BadManifestFormat(
-                    "Expected \"only\"'s value to be an Array".to_owned(),
-                ));
-            }
+        let serde_json::Value::Array(supported_archs) =
+            file_map.get("only").ok_or_else(|| {
+                Error::BadManifestFormat("Missing the \"only\" key".to_owned())
+            })?
+        else {
+            return Err(Error::BadManifestFormat(
+                "Expected \"only\"'s value to be an Array".to_owned(),
+            ));
         };
         let mut supported_by_this_arch = false;
         for arch_val in supported_archs {
@@ -121,12 +117,12 @@ pub fn update(
                             install_dir.pop();
 
                             continue;
-                        } else {
-                            println!(
-                                "        File doesn't exist; downloading \
-                                 from scratch..."
-                            );
                         }
+
+                        println!(
+                            "        File doesn't exist; downloading from \
+                             scratch..."
+                        );
                     }
 
                     let mut file_buf = [0u8; BUFFER_SIZE];
@@ -351,13 +347,10 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
             continue;
         }
 
-        let patch_map = match patch_obj {
-            serde_json::Value::Object(m) => m,
-            _ => {
-                return Err(Error::BadManifestFormat(
-                    "Expected \"patches\" to be objects".to_owned(),
-                ));
-            }
+        let serde_json::Value::Object(patch_map) = patch_obj else {
+            return Err(Error::BadManifestFormat(
+                "Expected \"patches\" to be objects".to_owned(),
+            ));
         };
 
         let patch_file_name = patch_map
@@ -380,9 +373,9 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
                 );
 
                 return Ok(());
-            } else {
-                println!("        Found a patch! Downloading it...");
             }
+
+            println!("        Found a patch! Downloading it...");
         }
 
         let mut extracted_patch_file_name =
@@ -450,11 +443,9 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
                 );
 
                 return Ok(());
-            } else {
-                println!(
-                    "        No patches found; downloading from scratch..."
-                );
             }
+
+            println!("        No patches found; downloading from scratch...");
         }
 
         let compressed_file_name = file_map

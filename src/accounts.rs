@@ -34,15 +34,13 @@ pub(crate) fn display_accounts(
     #[cfg(all(target_os = "linux", feature = "secret-store"))]
     let stored_accounts = crate::keyring::stored_accounts()?;
 
-    let max_name_len = if let Some(l) = config
+    let Some(max_name_len) = config
         .accounts
         .iter()
         .map(|(un, _)| un.len())
-        .chain(stored_accounts.iter().map(std::string::String::len))
+        .chain(stored_accounts.iter().map(String::len))
         .max()
-    {
-        l
-    } else {
+    else {
         return Ok(());
     };
 

@@ -260,7 +260,7 @@ fn run() -> Result<(), Error> {
         quiet,
         arg_matches
             .get_many::<String>("username")
-            .map(|it| it.map(std::string::String::as_str)),
+            .map(|it| it.map(String::as_str)),
         arg_matches.get_one("detach").copied().unwrap_or(false),
         max_tries,
     )
