@@ -26,16 +26,6 @@ accounts, logins           List all saved accounts/logins. Use the help
                              subcommand for info on account-management
                              subcommands.
 ";
-const ACCOUNTS_HELP_TEXT: &str = "\
-Account-management subcommands
-==============================
-accounts forget     Forget the specified account, erasing its username &
-  [username]          password from the config and from the Secret Service
-                      keyring, where applicable.
-accounts savepws    Set the value of store_passwords in your config. Note that
-  <true | false>      setting the value to false will NOT cause any passwords
-                      to be forgotten.
-";
 const ABOUT_TEXT: &str = concat!(
     crate_name!(),
     " v",
@@ -202,8 +192,8 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
             Some("accounts") | Some("logins") => {
                 check_children(quiet, &mut children)?;
                 match argv.next() {
-                    None => display_accounts(config, &children)?,
-                    Some("help") | Some("?") => accounts_help(),
+                    None => accounts::display_accounts(config, &children)?,
+                    Some("help") | Some("?") => accounts::accounts_help(),
                     Some("forget") => accounts::forget_account(
                         config,
                         &config_path,
@@ -237,10 +227,6 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
 
 fn help() {
     print!("{HELP_TEXT}");
-}
-
-fn accounts_help() {
-    print!("{ACCOUNTS_HELP_TEXT}");
 }
 
 fn about() {
@@ -394,50 +380,6 @@ fn kill_instance(
         children.remove(i);
     } else {
         println!("No currently-running instances have that username or PID.");
-    }
-
-    Ok(())
-}
-
-fn display_accounts(
-    config: &Config,
-    children: &[(String, process::Child, time::Instant)],
-) -> Result<(), Error> {
-    #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
-    let stored_accounts: Vec<String> = Vec::new();
-    #[cfg(all(target_os = "linux", feature = "secret-store"))]
-    let stored_accounts = crate::keyring::stored_accounts()?;
-
-    let max_name_len = if let Some(l) = config
-        .accounts
-        .iter()
-        .map(|(un, _)| un.len())
-        .chain(stored_accounts.iter().map(|u| u.len()))
-        .max()
-    {
-        l
-    } else {
-        return Ok(());
-    };
-
-    #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
-    let accounts = config.accounts.iter().map(|(un, p)| (un, p.is_string()));
-    #[cfg(all(target_os = "linux", feature = "secret-store"))]
-    let accounts = stored_accounts.iter().map(|u| (u, true));
-
-    for (username, saved_password) in accounts {
-        print!(
-            "{} {username}   ",
-            if children.iter().any(|(un, _, _)| un == username) {
-                '*'
-            } else {
-                ' '
-            },
-        );
-        for _ in 0..max_name_len - username.len() {
-            print!(" ");
-        }
-        println!("Password?: {}", if saved_password { "yes" } else { "no" });
     }
 
     Ok(())

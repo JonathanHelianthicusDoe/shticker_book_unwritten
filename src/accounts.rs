@@ -1,4 +1,4 @@
-//! Subcommands for `accounts`/`logins`
+//! `accounts`/`logins` command & its subcommands.
 
 use crate::{
     config::{Config, commit_config},
@@ -7,7 +7,70 @@ use crate::{
 use std::{
     io::{self, Write},
     path::Path,
+    process, time,
 };
+
+const ACCOUNTS_HELP_TEXT: &str = "\
+Account-management subcommands
+==============================
+accounts forget     Forget the specified account, erasing its username &
+  [username]          password from the config and from the Secret Service
+                      keyring, where applicable.
+accounts savepws    Set the value of store_passwords in your config. Note that
+  <true | false>      setting the value to false will NOT cause any passwords
+                      to be forgotten.
+";
+
+pub(crate) fn accounts_help() {
+    print!("{ACCOUNTS_HELP_TEXT}");
+}
+
+pub(crate) fn display_accounts(
+    config: &Config,
+    children: &[(String, process::Child, time::Instant)],
+) -> Result<(), Error> {
+    #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
+    let stored_accounts: Vec<String> = Vec::new();
+    #[cfg(all(target_os = "linux", feature = "secret-store"))]
+    let stored_accounts = crate::keyring::stored_accounts()?;
+
+    let max_name_len = if let Some(l) = config
+        .accounts
+        .iter()
+        .map(|(un, _)| un.len())
+        .chain(stored_accounts.iter().map(|u| u.len()))
+        .max()
+    {
+        l
+    } else {
+        return Ok(());
+    };
+
+    #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
+    let accounts = config.accounts.iter().map(|(un, p)| (un, p.is_string()));
+    #[cfg(all(target_os = "linux", feature = "secret-store"))]
+    let accounts = stored_accounts
+        .iter()
+        .map(|u| (u, true))
+        .chain(config.accounts.iter().map(|(un, p)| (un, p.is_string())));
+
+    for (username, saved_password) in accounts {
+        print!(
+            "{} {username}   ",
+            if children.iter().any(|(un, _, _)| un == username) {
+                '*'
+            } else {
+                ' '
+            },
+        );
+        for _ in 0..max_name_len - username.len() {
+            print!(" ");
+        }
+        println!("Password?: {}", if saved_password { "yes" } else { "no" });
+    }
+
+    Ok(())
+}
 
 #[cfg(not(all(target_os = "linux", feature = "secret-store")))]
 fn account_exists(config: &Config, username: &str) -> Result<bool, Error> {
@@ -120,7 +183,7 @@ pub(crate) fn set_store_passwords<P: AsRef<Path>>(
                  keyring."
             );
         } else {
-            println!("Passwords will neither be stored nor read.");
+            println!("Passwords will be neither stored nor read.");
         }
     }
 
