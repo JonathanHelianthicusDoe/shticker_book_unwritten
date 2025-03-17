@@ -192,13 +192,13 @@ pub fn update(
                 }
                 io::ErrorKind::PermissionDenied => {
                     return Err(Error::PermissionDenied(
-                        format!("opening {:?}", install_dir),
+                        format!("opening {install_dir:?}"),
                         ioe,
                     ));
                 }
                 _ => {
                     return Err(Error::UnknownIo(
-                        format!("opening {:?}", install_dir),
+                        format!("opening {install_dir:?}"),
                         ioe,
                     ));
                 }
@@ -243,11 +243,11 @@ pub fn update(
             .map_err(|ioe| match ioe.kind() {
                 io::ErrorKind::NotFound => Error::MissingFile(EXE_NAME),
                 io::ErrorKind::PermissionDenied => Error::PermissionDenied(
-                    format!("obtaining metadata for {:?}", install_dir),
+                    format!("obtaining metadata for {install_dir:?}"),
                     ioe,
                 ),
                 _ => Error::UnknownIo(
-                    format!("obtaining metadata for {:?}", install_dir),
+                    format!("obtaining metadata for {install_dir:?}"),
                     ioe,
                 ),
             })?
@@ -321,11 +321,11 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
 
     if !quiet {
         print!("        SHA-1 hash mismatch:\n          Local:    ");
-        for b in initial_sha.iter() {
+        for b in &initial_sha {
             print!("{b:02x}");
         }
         print!("\n          Manifest: ");
-        for b in manifest_sha.iter() {
+        for b in &manifest_sha {
             print!("{b:02x}");
         }
         println!("\n        Checking for a patch...");
@@ -346,7 +346,7 @@ fn update_existing_file<S: AsRef<str>, P: AsRef<Path>>(
         })?;
 
     let mut did_patch = false;
-    for (manifest_sha_str, patch_obj) in patches_map.iter() {
+    for (manifest_sha_str, patch_obj) in patches_map {
         if sha_from_hash_str(manifest_sha_str)? != initial_sha {
             continue;
         }
@@ -715,11 +715,11 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         if &dled_sha != compressed_sha {
             if !quiet {
                 eprint!("        SHA-1 hash mismatch:\n          Local:    ");
-                for b in dled_sha.iter() {
+                for b in &dled_sha {
                     eprint!("{b:02x}");
                 }
                 eprint!("\n          Manifest: ");
-                for b in compressed_sha.iter() {
+                for b in compressed_sha {
                     eprint!("{b:02x}");
                 }
                 eprintln!("\n        Redownloading...");
@@ -747,11 +747,11 @@ fn download_file<S: AsRef<str>, T: AsRef<str>>(
         if &extracted_sha != decompressed_sha {
             if !quiet {
                 eprint!("        SHA-1 hash mismatch:\n          Local:    ");
-                for b in extracted_sha.iter() {
+                for b in &extracted_sha {
                     eprint!("{b:02x}");
                 }
                 eprint!("\n          Manifest: ");
-                for b in decompressed_sha.iter() {
+                for b in decompressed_sha {
                     eprint!("{b:02x}");
                 }
                 eprintln!("\n        Redownloading...");

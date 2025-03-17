@@ -38,7 +38,7 @@ pub(crate) fn display_accounts(
         .accounts
         .iter()
         .map(|(un, _)| un.len())
-        .chain(stored_accounts.iter().map(|u| u.len()))
+        .chain(stored_accounts.iter().map(std::string::String::len))
         .max()
     {
         l

@@ -68,42 +68,7 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
 
     let mut username_buf = String::new();
 
-    if !usernames.is_empty() {
-        for username in usernames {
-            if let Some(password) = get_saved_password(config, username)? {
-                if !quiet {
-                    println!("Using saved password...");
-                }
-
-                if let Some(c) = handle_name_and_pw(
-                    config,
-                    config_path.as_ref(),
-                    client,
-                    quiet,
-                    no_save,
-                    username.to_owned(),
-                    password,
-                )? {
-                    children.push(c)
-                }
-            } else {
-                print!("Password for {username}: ");
-                io::stdout().flush().map_err(Error::Stdout)?;
-
-                if let Some(c) = handle_name_and_pw(
-                    config,
-                    config_path.as_ref(),
-                    client,
-                    quiet,
-                    no_save,
-                    username.to_owned(),
-                    rpassword::read_password().map_err(Error::PasswordRead)?,
-                )? {
-                    children.push(c)
-                }
-            }
-        }
-    } else {
+    if usernames.is_empty() {
         print!("Username: ");
         io::stdout().flush().map_err(Error::Stdout)?;
         username_buf.reserve(0x10);
@@ -136,7 +101,42 @@ pub fn login<'a, P: AsRef<Path>, A: Iterator<Item = &'a str>>(
             username_buf,
             password,
         )? {
-            children.push(c)
+            children.push(c);
+        }
+    } else {
+        for username in usernames {
+            if let Some(password) = get_saved_password(config, username)? {
+                if !quiet {
+                    println!("Using saved password...");
+                }
+
+                if let Some(c) = handle_name_and_pw(
+                    config,
+                    config_path.as_ref(),
+                    client,
+                    quiet,
+                    no_save,
+                    username.to_owned(),
+                    password,
+                )? {
+                    children.push(c);
+                }
+            } else {
+                print!("Password for {username}: ");
+                io::stdout().flush().map_err(Error::Stdout)?;
+
+                if let Some(c) = handle_name_and_pw(
+                    config,
+                    config_path.as_ref(),
+                    client,
+                    quiet,
+                    no_save,
+                    username.to_owned(),
+                    rpassword::read_password().map_err(Error::PasswordRead)?,
+                )? {
+                    children.push(c);
+                }
+            }
         }
     }
 
@@ -243,7 +243,7 @@ fn handle_login_negotiation(
                 return Ok(Some(response_json));
             }
             "delayed" => {
-                response_json = enqueue(client, quiet, &response_json)?
+                response_json = enqueue(client, quiet, &response_json)?;
             }
             "partial" => {
                 response_json =

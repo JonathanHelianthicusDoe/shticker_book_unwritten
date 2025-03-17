@@ -173,7 +173,7 @@ fn apply_patch<P: AsRef<Path>, Q: AsRef<Path>>(
     let mut newpos = 0i64;
     while newpos < newsize {
         // Read control data
-        for ctrl_off in ctrl.iter_mut() {
+        for ctrl_off in &mut ctrl {
             cpfbz2.read_exact(&mut buf).map_err(|ioe| {
                 Error::Decode(patch_file_path.as_ref().to_path_buf(), ioe)
             })?;

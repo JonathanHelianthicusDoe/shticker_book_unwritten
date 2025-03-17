@@ -69,7 +69,27 @@ pub fn get_config(
         }
     };
 
-    if !no_config {
+    if no_config {
+        if !quiet {
+            println!("Not using any config file...");
+        }
+
+        Ok((
+            Config {
+                install_dir: install_path.ok_or_else(|| {
+                    Error::MissingCommandLineArg("--install-dir")
+                })?,
+                cache_dir: cache_path.ok_or_else(|| {
+                    Error::MissingCommandLineArg("--cache-dir")
+                })?,
+                manifest_uri: DEFAULT_MANIFEST_URI.to_owned(),
+                cdn_uri: DEFAULT_CDN_URI.to_owned(),
+                store_passwords: false,
+                accounts: serde_json::Map::default(),
+            },
+            PathBuf::new(),
+        ))
+    } else {
         let config_path = if let Some(s) = config_path {
             s
         } else {
@@ -188,36 +208,16 @@ pub fn get_config(
                 }
                 io::ErrorKind::PermissionDenied => {
                     Err(Error::PermissionDenied(
-                        format!("opening {:?}", config_path),
+                        format!("opening {config_path:?}"),
                         ioe,
                     ))
                 }
                 _ => Err(Error::UnknownIo(
-                    format!("opening {:?}", config_path),
+                    format!("opening {config_path:?}"),
                     ioe,
                 )),
             },
         }
-    } else {
-        if !quiet {
-            println!("Not using any config file...");
-        }
-
-        Ok((
-            Config {
-                install_dir: install_path.ok_or_else(|| {
-                    Error::MissingCommandLineArg("--install-dir")
-                })?,
-                cache_dir: cache_path.ok_or_else(|| {
-                    Error::MissingCommandLineArg("--cache-dir")
-                })?,
-                manifest_uri: DEFAULT_MANIFEST_URI.to_owned(),
-                cdn_uri: DEFAULT_CDN_URI.to_owned(),
-                store_passwords: false,
-                accounts: serde_json::Map::default(),
-            },
-            PathBuf::new(),
-        ))
     }
 }
 

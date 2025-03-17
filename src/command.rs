@@ -92,7 +92,7 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
             .filter(|arg| !arg.is_empty());
         match argv.next() {
             None => check_children(quiet, &mut children)?,
-            Some("help") | Some("?") => {
+            Some("help" | "?") => {
                 help();
                 check_children(quiet, &mut children)?;
             }
@@ -100,7 +100,7 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                 about();
                 check_children(quiet, &mut children)?;
             }
-            Some("quit") | Some("exit") => {
+            Some("quit" | "exit") => {
                 check_children(quiet, &mut children)?;
                 if children.is_empty() {
                     break;
@@ -125,8 +125,8 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
 
                 loop {
                     match command_buf.trim_start().as_bytes().first() {
-                        Some(b'y') | Some(b'Y') => break 'outer,
-                        Some(b'n') | Some(b'N') => break,
+                        Some(b'y' | b'Y') => break 'outer,
+                        Some(b'n' | b'N') => break,
                         _ => (),
                     }
 
@@ -138,7 +138,7 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                         .map_err(Error::Stdin)?;
                 }
             }
-            Some("update") | Some("up") => {
+            Some("update" | "up") => {
                 check_children(quiet, &mut children)?;
 
                 let mut dry = false;
@@ -154,7 +154,7 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                 }
 
                 if dry || children.is_empty() {
-                    update::update(config, client, quiet, max_tries, dry)?
+                    update::update(config, client, quiet, max_tries, dry)?;
                 } else if children.len() == 1 {
                     println!(
                         "There's still a game instance running; can't update \
@@ -170,7 +170,7 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                     );
                 }
             }
-            Some("login") | Some("play") | Some("launch") => {
+            Some("login" | "play" | "launch") => {
                 login::login(
                     config,
                     &config_path,
@@ -181,19 +181,19 @@ pub fn enter_command_mode<'a, P: AsRef<Path>, U: Iterator<Item = &'a str>>(
                 )?;
                 check_children(quiet, &mut children)?;
             }
-            Some("instances") | Some("running") => {
+            Some("instances" | "running") => {
                 check_children(quiet, &mut children)?;
                 display_instances(&children);
             }
-            Some("kill") | Some("close") => {
+            Some("kill" | "close") => {
                 check_children(quiet, &mut children)?;
                 kill_instance(quiet, &mut children, argv.next())?;
             }
-            Some("accounts") | Some("logins") => {
+            Some("accounts" | "logins") => {
                 check_children(quiet, &mut children)?;
                 match argv.next() {
                     None => accounts::display_accounts(config, &children)?,
-                    Some("help") | Some("?") => accounts::accounts_help(),
+                    Some("help" | "?") => accounts::accounts_help(),
                     Some("forget") => accounts::forget_account(
                         config,
                         &config_path,
