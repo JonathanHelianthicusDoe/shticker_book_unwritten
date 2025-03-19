@@ -13,6 +13,7 @@ use std::{
 const ACCOUNTS_HELP_TEXT: &str = "\
 Account-management subcommands
 ==============================
+accounts help       Display this message.
 accounts forget     Forget the specified account, erasing its username &
   [username]          password from the config and from the Secret Service
                       keyring, where applicable.
