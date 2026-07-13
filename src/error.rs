@@ -94,7 +94,7 @@ impl fmt::Display for Error {
                 write!(f, "Failed to read JSON:\n\t{de}")
             }
             Self::ManifestRequest(mre) => {
-                write!(f, "Error requesting manifest:\n\t{mre}")
+                write!(f, "Error requesting manifest:\n\t{mre:?}")
             }
             Self::ManifestRequestStatus(sc) => {
                 write!(f, "Bad status code after requesting manifest:\n\t{sc}",)
@@ -109,7 +109,7 @@ impl fmt::Display for Error {
                 write!(f, "Failed to write to {path:?}:\n\t{ioe}")
             }
             Self::DownloadRequest(dre) => {
-                write!(f, "Error requesting download: {dre}")
+                write!(f, "Error requesting download: {dre:?}")
             }
             Self::DownloadRequestStatus(sc) => {
                 write!(f, "Bad status code after requesting download: {sc}")
@@ -193,7 +193,7 @@ impl fmt::Display for Error {
             Self::SessionStoreConnect(error) => {
                 write!(
                     f,
-                    "Failed to connect to session password store:\n\t{}",
+                    "Failed to connect to session password store:\n\t{:?}",
                     error
                 )
             }
@@ -201,7 +201,7 @@ impl fmt::Display for Error {
             Self::PasswordUnlock(error) => {
                 write!(
                     f,
-                    "Could not unlock password from session store:\n\t{}",
+                    "Could not unlock password from session store:\n\t{:?}",
                     error
                 )
             }
@@ -209,7 +209,7 @@ impl fmt::Display for Error {
             Self::PasswordGet(error) => {
                 write!(
                     f,
-                    "Failed to get password from secret store:\n\t{}",
+                    "Failed to get password from secret store:\n\t{:?}",
                     error
                 )
             }
@@ -225,14 +225,14 @@ impl fmt::Display for Error {
             Self::PasswordSave(error) => {
                 write!(
                     f,
-                    "Failed to save password in session store:\n\t{}",
+                    "Failed to save password in session store:\n\t{:?}",
                     error
                 )
             }
             #[cfg(all(target_os = "linux", feature = "secret-store"))]
             Self::DeleteSecretItem(error) => write!(
                 f,
-                "Failed to delete item in secret store:\n\t{}",
+                "Failed to delete item in secret store:\n\t{:?}",
                 error
             ),
         }
